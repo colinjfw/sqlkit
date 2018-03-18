@@ -1,15 +1,24 @@
-package sql
+package db
 
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"sync"
 	"time"
 
-	"github.com/coldog/sqlkit/marshal"
+	"github.com/coldog/sqlkit/encoding"
 )
 
+var (
+	// ErrStatementInvalid is returned when a statement is invalid.
+	ErrStatementInvalid = errors.New("sqlkit/db: statement invalid")
+	// ErrNotAQuery is returned when Decode is called on an Exec.
+	ErrNotAQuery = errors.New("sqlkit/db: query was not issued")
+)
+
+// StdLogger is a basic logger that uses the "log" package to log sql queries.
 func StdLogger(s SQL) {
 	sql, args, err := s.SQL()
 	if err != nil {
@@ -19,21 +28,31 @@ func StdLogger(s SQL) {
 	log.Printf("sql: executing %s -- %v", sql, args)
 }
 
-type DBOption func(db *db)
+// Option represents option configurations.
+type Option func(db *db)
 
-func WithLogger(logger func(SQL)) DBOption {
+// WithLogger configures a logging function.
+func WithLogger(logger func(SQL)) Option {
 	return func(db *db) { db.logger = logger }
 }
 
-func WithDialect(dialect Dialect) DBOption {
+// WithDialect configures the SQL dialect.
+func WithDialect(dialect Dialect) Option {
 	return func(db *db) { db.dialect = dialect }
 }
 
-func WithConn(conn *sql.DB) DBOption {
+// WithConn configures a custom *sql.DB connection.
+func WithConn(conn *sql.DB) Option {
 	return func(db *db) { db.DB = conn }
 }
 
-func New(opts ...DBOption) DB {
+// WithEncoder configures a custom encoder if a different mapper were needed.
+func WithEncoder(enc encoding.Encoder) Option {
+	return func(db *db) { db.encoder = enc }
+}
+
+// New initializes a new DB agnostic to the underlying SQL connection.
+func New(opts ...Option) DB {
 	out := &db{
 		cache:  map[string]*sql.Stmt{},
 		logger: func(SQL) {},
@@ -44,7 +63,9 @@ func New(opts ...DBOption) DB {
 	return out
 }
 
-func Open(driverName, dataSourceName string, opts ...DBOption) (DB, error) {
+// Open will call database/sql Open under the hood and configure a database with
+// an appropriate dialect.
+func Open(driverName, dataSourceName string, opts ...Option) (DB, error) {
 	d, err := sql.Open(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
@@ -66,18 +87,11 @@ func Open(driverName, dataSourceName string, opts ...DBOption) (DB, error) {
 		dialect = Generic
 	}
 
-	out := &db{
-		dialect: dialect,
-		DB:      d,
-		cache:   map[string]*sql.Stmt{},
-		logger:  func(SQL) {},
-	}
-	for _, o := range opts {
-		o(out)
-	}
+	out := New(WithConn(d), WithDialect(dialect))
 	return out, nil
 }
 
+// Raw implements the SQL intorerface for providing SQL queries.
 func Raw(sql string, args ...interface{}) SQL {
 	return raw{sql: sql, args: args}
 }
@@ -91,10 +105,13 @@ func (q raw) SQL() (string, []interface{}, error) {
 	return q.sql, q.args, nil
 }
 
+// SQL is an interface for an SQL query that contains a string of SQL and
+// arguments.
 type SQL interface {
 	SQL() (string, []interface{}, error)
 }
 
+// DB is the interface for the DB object.
 type DB interface {
 	Query(context.Context, SQL) *Result
 	Exec(context.Context, SQL) *Result
@@ -105,24 +122,20 @@ type DB interface {
 	Update(string) UpdateStmt
 }
 
+// Result wraps a database/sql query result.
 type Result struct {
 	*sql.Rows
 	LastID       int64
 	RowsAffected int64
 	err          error
+	encoder      encoding.Encoder
 }
 
+// Err forwards the error that may have come from the connection.
 func (r *Result) Err() error { return r.err }
 
-func (r *Result) List(val interface{}) (err error) {
-	return r.unmarshal(val, false)
-}
-
-func (r *Result) First(val interface{}) (err error) {
-	return r.unmarshal(val, true)
-}
-
-func (r *Result) unmarshal(val interface{}, first bool) (err error) {
+// Decode will decode the results into an interface.
+func (r *Result) Decode(val interface{}) (err error) {
 	if r.Err() != nil {
 		return r.Err()
 	}
@@ -130,18 +143,13 @@ func (r *Result) unmarshal(val interface{}, first bool) (err error) {
 		return ErrNotAQuery
 	}
 	defer r.Rows.Close()
-	if first {
-		if !r.Rows.Next() {
-			return sql.ErrNoRows
-		}
-		return marshal.Unmarshal(val, r.Rows)
-	}
-	return marshal.UnmarshalRows(val, r.Rows)
+	return r.encoder.Decode(val, r.Rows)
 }
 
 type db struct {
 	*sql.DB
 
+	encoder encoding.Encoder
 	dialect Dialect
 	lock    sync.RWMutex
 	cache   map[string]*sql.Stmt
@@ -178,7 +186,7 @@ func (d *db) Query(ctx context.Context, q SQL) *Result {
 		return &Result{err: err}
 	}
 	rows, err := st.QueryContext(ctx, args...)
-	return &Result{Rows: rows, err: err}
+	return &Result{Rows: rows, err: err, encoder: d.encoder}
 }
 
 func (d *db) Exec(ctx context.Context, q SQL) *Result {
@@ -203,6 +211,7 @@ func (d *db) Exec(ctx context.Context, q SQL) *Result {
 		LastID:       lastID,
 		RowsAffected: affected,
 		err:          err,
+		encoder:      d.encoder,
 	}
 }
 
@@ -211,11 +220,11 @@ func (d *db) Select(cols ...string) SelectStmt {
 }
 
 func (d *db) Insert() InsertStmt {
-	return InsertStmt{dialect: d.dialect}
+	return InsertStmt{dialect: d.dialect, encoder: d.encoder}
 }
 
 func (d *db) Update(table string) UpdateStmt {
-	return UpdateStmt{dialect: d.dialect, table: table}
+	return UpdateStmt{dialect: d.dialect, table: table, encoder: d.encoder}
 }
 
 func (d *db) Close() error {

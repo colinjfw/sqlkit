@@ -1,4 +1,4 @@
-package sql
+package db
 
 // Dialect represents the SQL dialect type.
 type Dialect int

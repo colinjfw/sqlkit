@@ -1,12 +1,20 @@
-package sql
+package db
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
 )
+
+func testSQL(t *testing.T, expected string, values []interface{}, sql SQL) {
+	str, vals, err := sql.SQL()
+	require.Nil(t, err)
+	require.Equal(t, expected, strings.TrimSpace(str))
+	require.EqualValues(t, values, vals)
+}
 
 func TestDB_Open(t *testing.T) {
 	db, err := Open("sqlite3", ":memory:")
@@ -84,7 +92,7 @@ func TestDB_Unmarshal(t *testing.T) {
 	err = db.Exec(ctx, db.Insert().Into("users").Value("id", 1)).Err()
 	require.Nil(t, err)
 
-	err = db.Query(ctx, db.Select("users.*").From("users")).List(&obj)
+	err = db.Query(ctx, db.Select("users.*").From("users")).Decode(&obj)
 	require.Nil(t, err)
 
 	require.Equal(t, 1, obj[0].ID)
@@ -115,7 +123,7 @@ func TestDB_Marshal(t *testing.T) {
 	err = db.Query(ctx,
 		db.Select("count(*) as count").
 			From("users"),
-	).First(&out)
+	).Decode(&out)
 	require.Equal(t, 1, out.Count)
 	require.Nil(t, err)
 
