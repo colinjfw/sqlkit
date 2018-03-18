@@ -3,10 +3,8 @@ package marshal
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
-	"sync"
 
 	"github.com/jmoiron/sqlx/reflectx"
 )
@@ -15,36 +13,12 @@ var (
 	ErrRequiresPtr        = errors.New("sql/marshal: pointer passed to Unmarshal")
 	ErrMustNotBeNil       = errors.New("sql/marshal: nil value passed to Unmarshal")
 	ErrMissingDestination = errors.New("sql/marshal: missing destination")
+	ErrTooManyColumns     = errors.New("sql/marshal: too many columns to scan")
 )
 
-// NameMapper is used to map column names to struct field names.  By default,
-// it uses strings.ToLower to lowercase struct field names.  It can be set
-// to whatever you want, but it is encouraged to be set before sqlx is used
-// as name-to-field mappings are cached after first use on a type.
-var NameMapper = strings.ToLower
-var origMapper = reflect.ValueOf(NameMapper)
-
-// Rather than creating on init, this is created when necessary so that
-// importers have time to customize the NameMapper.
-var mpr *reflectx.Mapper
-
-// mprMu protects mpr.
-var mprMu sync.Mutex
-
-// mapper returns a valid mapper using the configured NameMapper func.
-func mapper() *reflectx.Mapper {
-	mprMu.Lock()
-	defer mprMu.Unlock()
-
-	if mpr == nil {
-		mpr = reflectx.NewMapperFunc("db", NameMapper)
-	} else if origMapper != reflect.ValueOf(NameMapper) {
-		// if NameMapper has changed, create a new mapper
-		mpr = reflectx.NewMapperFunc("db", NameMapper)
-		origMapper = reflect.ValueOf(NameMapper)
-	}
-	return mpr
-}
+// DefaultMapper is the default reflectx mapper used. This uses strings.ToLower
+// to map field names.
+var DefaultMapper = reflectx.NewMapperFunc("db", strings.ToLower)
 
 var _scannerInterface = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
 
@@ -63,8 +37,7 @@ func isScannable(t reflect.Type) bool {
 
 	// it's not important that we use the right mapper for this particular object,
 	// we're only concerned on how many exported fields this struct has
-	m := mapper()
-	if len(m.TypeMap(t).Index) == 0 {
+	if len(DefaultMapper.TypeMap(t).Index) == 0 {
 		return true
 	}
 	return false
@@ -87,7 +60,8 @@ func (n *nilSafety) Scan(src interface{}) error {
 // when iterating over many rows.  Empty traversals will get an interface pointer.
 // Because of the necessity of requesting ptrs or values, it's considered a bit too
 // specialized for inclusion in reflectx itself.
-func fieldsByTraversal(v reflect.Value, traversals [][]int, values []interface{}) error {
+func fieldsByTraversal(
+	v reflect.Value, traversals [][]int, values []interface{}, unsafe bool) error {
 	v = reflect.Indirect(v)
 	if v.Kind() != reflect.Struct {
 		return errors.New("argument not a struct")
@@ -95,12 +69,15 @@ func fieldsByTraversal(v reflect.Value, traversals [][]int, values []interface{}
 
 	for i, traversal := range traversals {
 		if len(traversal) == 0 {
-			values[i] = new(interface{})
-			continue
+			if unsafe {
+				values[i] = new(interface{})
+				continue
+			}
+			return ErrMissingDestination
 		}
-		var f reflect.Value
+		f := v
 		for _, i2 := range traversal {
-			f = reflect.Indirect(v).Field(i2)
+			f = reflect.Indirect(f).Field(i2)
 		}
 		values[i] = &nilSafety{dest: f.Addr().Interface()}
 	}
@@ -108,6 +85,21 @@ func fieldsByTraversal(v reflect.Value, traversals [][]int, values []interface{}
 }
 
 func Unmarshal(dest interface{}, rows *sql.Rows) error {
+	return Decoder{}.Decode(dest, rows)
+}
+
+func NewDecoder() Decoder { return Decoder{} }
+
+type Decoder struct {
+	unsafe bool
+}
+
+func (e Decoder) Unsafe() Decoder {
+	e.unsafe = true
+	return e
+}
+
+func (e Decoder) Decode(dest interface{}, rows *sql.Rows) error {
 	value := reflect.ValueOf(dest)
 	if value.Kind() != reflect.Ptr {
 		return ErrRequiresPtr
@@ -116,24 +108,25 @@ func Unmarshal(dest interface{}, rows *sql.Rows) error {
 		return ErrRequiresPtr
 	}
 	var slice bool
-	t := reflectx.Deref(value.Type())
-	if t.Kind() == reflect.Slice {
+	base := reflectx.Deref(value.Type())
+	if base.Kind() == reflect.Slice {
 		slice = true
 	}
 
 	if slice {
-		if err := scanAll(t, value, rows); err != nil {
+		if err := e.scanAll(base, value, rows); err != nil {
 			return err
 		}
 	} else {
-		if err := scanRow(value, rows); err != nil {
+		if err := e.scanRow(base, value, dest, rows); err != nil {
 			return err
 		}
 	}
 	return rows.Err()
 }
 
-func scanAll(slice reflect.Type, value reflect.Value, rows *sql.Rows) error {
+func (e Decoder) scanAll(
+	slice reflect.Type, value reflect.Value, rows *sql.Rows) error {
 	direct := reflect.Indirect(value)
 	isPtr := slice.Elem().Kind() == reflect.Ptr
 	base := reflectx.Deref(slice.Elem())
@@ -146,12 +139,12 @@ func scanAll(slice reflect.Type, value reflect.Value, rows *sql.Rows) error {
 
 	// if it's a base type make sure it only has 1 column;  if not return an error
 	if scannable && len(columns) > 1 {
-		return fmt.Errorf("non-struct dest type %s with >1 columns (%d)", base.Kind(), len(columns))
+		return ErrTooManyColumns
 	}
 
 	if !scannable {
 		var values []interface{}
-		m := mapper()
+		m := DefaultMapper
 		fields := m.TraversalsByName(base, columns)
 		values = make([]interface{}, len(columns))
 
@@ -160,7 +153,7 @@ func scanAll(slice reflect.Type, value reflect.Value, rows *sql.Rows) error {
 			vp := reflect.New(base)
 			v := reflect.Indirect(vp)
 
-			err = fieldsByTraversal(v, fields, values)
+			err = fieldsByTraversal(v, fields, values, e.unsafe)
 			if err != nil {
 				return err
 			}
@@ -195,24 +188,38 @@ func scanAll(slice reflect.Type, value reflect.Value, rows *sql.Rows) error {
 	return nil
 }
 
-func scanRow(value reflect.Value, rows *sql.Rows) error {
+func (e Decoder) scanRow(
+	base reflect.Type, value reflect.Value, dest interface{},
+	rows *sql.Rows) error {
+	// Do this early so we don't have to waste type reflecting or traversing if
+	// there isn't anything to scan.
+	if !rows.Next() {
+		return sql.ErrNoRows
+	}
+
 	value = reflect.Indirect(value)
+	scannable := isScannable(base)
 
 	columns, err := rows.Columns()
 	if err != nil {
 		return err
 	}
-	m := mapper()
-	fields := m.TraversalsByName(value.Type(), columns)
-	values := make([]interface{}, len(columns))
-	err = fieldsByTraversal(value, fields, values)
-	if err != nil {
-		return err
+
+	// If it's scannable, like a scalar type, we can scan directly right here.
+	if scannable {
+		// Ensure that only one column to scan into.
+		if len(columns) > 1 {
+			return ErrTooManyColumns
+		}
+		return rows.Scan(dest)
 	}
 
-	// Check if we can iterate if not we return the standard sql ErrNoRows.
-	if !rows.Next() {
-		return sql.ErrNoRows
+	m := DefaultMapper
+	fields := m.TraversalsByName(value.Type(), columns)
+	values := make([]interface{}, len(columns))
+	err = fieldsByTraversal(value, fields, values, e.unsafe)
+	if err != nil {
+		return err
 	}
 
 	// scan into the struct field pointers and append to our results

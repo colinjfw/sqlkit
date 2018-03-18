@@ -71,6 +71,7 @@ func TestUnmarshal_NullTypes(t *testing.T) {
 
 		rows, err := db.Query(`select * from users`)
 		require.Nil(t, err)
+		defer rows.Close()
 
 		dest := []*allTypes{}
 		err = Unmarshal(&dest, rows)
@@ -99,6 +100,7 @@ func TestUnmarshal_PtrNullTypes(t *testing.T) {
 
 		rows, err := db.Query(`select * from users`)
 		require.Nil(t, err)
+		defer rows.Close()
 
 		dest := []*allTypes{}
 		err = Unmarshal(&dest, rows)
@@ -136,6 +138,7 @@ func TestUnmarshal_PresentTypes(t *testing.T) {
 
 		rows, err := db.Query(`select * from users`)
 		require.Nil(t, err)
+		defer rows.Close()
 
 		dest := []*allTypes{}
 		err = Unmarshal(&dest, rows)
@@ -172,6 +175,7 @@ func TestUnmarshal_PresentPtrTypes(t *testing.T) {
 
 		rows, err := db.Query(`select * from users`)
 		require.Nil(t, err)
+		defer rows.Close()
 
 		dest := []*allTypes{}
 		err = Unmarshal(&dest, rows)
@@ -208,12 +212,251 @@ func TestUnmarshal_SingleRow(t *testing.T) {
 
 		rows, err := db.Query(`select * from users`)
 		require.Nil(t, err)
+		defer rows.Close()
 
 		dest := &allTypes{}
 		err = Unmarshal(dest, rows)
 		require.Nil(t, err)
 
 		require.Equal(t, "hello", *dest.TString)
+		spew.Dump(dest)
+	})
+}
+
+func TestUnmarshal_ListNonPtrStruct(t *testing.T) {
+	type allTypes struct {
+		ID      *int
+		TInt    *int
+		TFloat  *float64
+		TBytes  *[]byte
+		TString *string
+		TBool   *bool
+		TTime   *time.Time
+		TJSON   *types.JSONText
+	}
+
+	const insert = `
+	insert into users (id, tint, tfloat, tbytes, tstring, tbool, ttime, tjson)
+	values (?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	var args = []interface{}{
+		1, 2, 2.3, []byte("hello"), "hello", true, time.Now(), types.JSONText("{}"),
+	}
+
+	run(t, defaultSchema, defaultDrop, func(db *sql.DB) {
+		_, err := db.Exec(insert, args...)
+		require.Nil(t, err)
+
+		rows, err := db.Query(`select * from users`)
+		require.Nil(t, err)
+		defer rows.Close()
+
+		dest := []allTypes{}
+		err = Unmarshal(&dest, rows)
+		require.Nil(t, err)
+
+		spew.Dump(dest)
+	})
+}
+
+func TestUnmarshal_Embedded(t *testing.T) {
+	type BaseType struct {
+		ID int
+	}
+	type allTypes struct {
+		BaseType
+		TInt    int
+		TFloat  float64
+		TBytes  []byte
+		TString string
+		TBool   bool
+		TTime   time.Time
+		TJSON   types.JSONText
+	}
+
+	const insert = `
+	insert into users (id, tint, tfloat, tbytes, tstring, tbool, ttime, tjson)
+	values (?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	var args = []interface{}{
+		1, 2, 2.3, []byte("hello"), "hello", true, time.Now(), types.JSONText("{}"),
+	}
+
+	run(t, defaultSchema, defaultDrop, func(db *sql.DB) {
+		_, err := db.Exec(insert, args...)
+		require.Nil(t, err)
+
+		rows, err := db.Query(`select * from users`)
+		require.Nil(t, err)
+		defer rows.Close()
+
+		dest := &allTypes{}
+		err = Unmarshal(dest, rows)
+		require.Nil(t, err)
+
+		require.Equal(t, 1, dest.ID)
+		require.Equal(t, "hello", dest.TString)
+		spew.Dump(dest)
+	})
+}
+
+func TestUnmarshal_OtherStruct(t *testing.T) {
+	type BaseType struct {
+		ID int
+	}
+	type OtherType struct {
+		Boring string
+	}
+	type allTypes struct {
+		BaseType
+		TInt    int
+		TFloat  float64
+		TBytes  []byte
+		TString string
+		TBool   bool
+		TTime   time.Time
+		TJSON   types.JSONText
+		Other   OtherType
+	}
+
+	const insert = `
+	insert into users (id, tint, tfloat, tbytes, tstring, tbool, ttime, tjson)
+	values (?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	var args = []interface{}{
+		1, 2, 2.3, []byte("hello"), "hello", true, time.Now(), types.JSONText("{}"),
+	}
+
+	run(t, defaultSchema, defaultDrop, func(db *sql.DB) {
+		_, err := db.Exec(insert, args...)
+		require.Nil(t, err)
+
+		rows, err := db.Query(`select * from users`)
+		require.Nil(t, err)
+		defer rows.Close()
+
+		dest := &allTypes{}
+		err = Unmarshal(dest, rows)
+		require.Nil(t, err)
+
+		require.Equal(t, 1, dest.ID)
+		require.Equal(t, "hello", dest.TString)
+		spew.Dump(dest)
+	})
+}
+
+func TestUnmarshal_Missing(t *testing.T) {
+	type allTypes struct {
+		ID   int
+		TInt int
+	}
+
+	const insert = `
+	insert into users (id, tint, tfloat, tbytes, tstring, tbool, ttime, tjson)
+	values (?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	var args = []interface{}{
+		1, 2, 2.3, []byte("hello"), "hello", true, time.Now(), types.JSONText("{}"),
+	}
+
+	run(t, defaultSchema, defaultDrop, func(db *sql.DB) {
+		_, err := db.Exec(insert, args...)
+		require.Nil(t, err)
+
+		rows, err := db.Query(`select * from users`)
+		require.Nil(t, err)
+		defer rows.Close()
+
+		dest := &allTypes{}
+		err = Unmarshal(dest, rows)
+		require.Equal(t, ErrMissingDestination, err)
+
+		// rows2, err := db.Query(`select * from users`)
+		// require.Nil(t, err)
+		// //	defer rows2.Close()
+
+		// err = NewDecoder().Unsafe().Decode(dest, rows2)
+		// require.Nil(t, err)
+		// require.Equal(t, 1, dest.ID)
+		// require.Equal(t, 2, dest.TInt)
+		// spew.Dump(dest)
+	})
+}
+
+func TestUnmarshal_MissingUnsafe(t *testing.T) {
+	type allTypes struct {
+		ID   int
+		TInt int
+	}
+
+	const insert = `
+	insert into users (id, tint, tfloat, tbytes, tstring, tbool, ttime, tjson)
+	values (?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	var args = []interface{}{
+		1, 2, 2.3, []byte("hello"), "hello", true, time.Now(), types.JSONText("{}"),
+	}
+
+	run(t, defaultSchema, defaultDrop, func(db *sql.DB) {
+		_, err := db.Exec(insert, args...)
+		require.Nil(t, err)
+
+		rows, err := db.Query(`select * from users`)
+		require.Nil(t, err)
+		defer rows.Close()
+
+		dest := &allTypes{}
+
+		err = NewDecoder().Unsafe().Decode(dest, rows)
+		require.Nil(t, err)
+		require.Equal(t, 1, dest.ID)
+		require.Equal(t, 2, dest.TInt)
+		spew.Dump(dest)
+	})
+}
+
+func TestUnmarshal_ListRaw(t *testing.T) {
+	run(t, defaultSchema, defaultDrop, func(db *sql.DB) {
+		rows, err := db.Query(`select count(*) from users`)
+		require.Nil(t, err)
+		defer rows.Close()
+
+		var dest []int
+		err = Unmarshal(&dest, rows)
+		require.Nil(t, err)
+
+		require.Equal(t, 0, dest[0])
+		spew.Dump(dest)
+	})
+}
+
+func TestUnmarshal_ListRawPtr(t *testing.T) {
+	run(t, defaultSchema, defaultDrop, func(db *sql.DB) {
+		rows, err := db.Query(`select count(*) from users`)
+		require.Nil(t, err)
+		defer rows.Close()
+
+		var dest []*int
+		err = Unmarshal(&dest, rows)
+		require.Nil(t, err)
+
+		require.Equal(t, 0, *dest[0])
+		spew.Dump(dest)
+	})
+}
+
+func TestUnmarshal_RawRow(t *testing.T) {
+	run(t, defaultSchema, defaultDrop, func(db *sql.DB) {
+		db.Exec(`insert into users (id) values (?), (?)`, 1, 2)
+		rows, err := db.Query(`select count(*) from users`)
+		require.Nil(t, err)
+		defer rows.Close()
+
+		var dest int
+		err = Unmarshal(&dest, rows)
+		require.Nil(t, err)
+
+		require.Equal(t, 2, dest)
 		spew.Dump(dest)
 	})
 }
