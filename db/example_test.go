@@ -7,7 +7,7 @@ import (
 	"github.com/coldog/sqlkit/db"
 )
 
-func Example() {
+func ExampleOpen() {
 	ctx := context.Background()
 	d, err := db.Open("sqlite3", ":memory:", db.WithLogger(db.StdLogger))
 	if err != nil {

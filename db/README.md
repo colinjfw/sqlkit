@@ -65,7 +65,7 @@ convenient sql builder, transaction handling and encoding features.
   * [func (i UpdateStmt) Where(where string, args ...interface{}) UpdateStmt](#UpdateStmt.Where)
 
 #### <a name="pkg-examples">Examples</a>
-* [Package](#example_)
+* [Open](#example_Open)
 
 #### <a name="pkg-files">Package files</a>
 [db.go](/src/github.com/coldog/sqlkit/db/db.go) [dialect.go](/src/github.com/coldog/sqlkit/db/dialect.go) [dialect_generic.go](/src/github.com/coldog/sqlkit/db/dialect_generic.go) [insert.go](/src/github.com/coldog/sqlkit/db/insert.go) [select.go](/src/github.com/coldog/sqlkit/db/select.go) [update.go](/src/github.com/coldog/sqlkit/db/update.go) 

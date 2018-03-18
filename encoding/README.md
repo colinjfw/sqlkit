@@ -26,7 +26,8 @@ handles null values.
   * [func (e Encoder) WithMapper(m *reflectx.Mapper) Encoder](#Encoder.WithMapper)
 
 #### <a name="pkg-examples">Examples</a>
-* [Package](#example_)
+* [Marshal](#example_Marshal)
+* [Unmarshal](#example_Unmarshal)
 
 #### <a name="pkg-files">Package files</a>
 [encoding.go](/src/github.com/coldog/sqlkit/encoding/encoding.go) [marshal.go](/src/github.com/coldog/sqlkit/encoding/marshal.go) [unmarshal.go](/src/github.com/coldog/sqlkit/encoding/unmarshal.go) 
