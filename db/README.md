@@ -11,6 +11,22 @@
 Package db provides a wrapper around the base database/sql package with a
 convenient sql builder, transaction handling and encoding features.
 
+The simplest usage of db is below:
+
+
+	ctx := context.Background()
+	d, err := db.Open("sqlite3", ":memory:", db.WithLogger(db.StdLogger))
+	
+	err = d.Exec(ctx, d.Insert(). Into("test"). Value("id", 2)).Err()
+	
+	var rows []int
+	err = d.Query(ctx, d.Select("*").From("test")).Decode(&rows)
+	fmt.Printf("%v\n", rows)
+	
+	var count int
+	err = d.Query(ctx, d.Select("count(*)").From("test")).Decode(&count)
+	fmt.Println(count)
+
 
 
 
@@ -68,7 +84,7 @@ convenient sql builder, transaction handling and encoding features.
 * [Open](#example_Open)
 
 #### <a name="pkg-files">Package files</a>
-[db.go](/src/github.com/coldog/sqlkit/db/db.go) [dialect.go](/src/github.com/coldog/sqlkit/db/dialect.go) [dialect_generic.go](/src/github.com/coldog/sqlkit/db/dialect_generic.go) [insert.go](/src/github.com/coldog/sqlkit/db/insert.go) [select.go](/src/github.com/coldog/sqlkit/db/select.go) [update.go](/src/github.com/coldog/sqlkit/db/update.go) 
+[db.go](/src/github.com/coldog/sqlkit/db/db.go) [dialect.go](/src/github.com/coldog/sqlkit/db/dialect.go) [dialect_generic.go](/src/github.com/coldog/sqlkit/db/dialect_generic.go) [doc.go](/src/github.com/coldog/sqlkit/db/doc.go) [insert.go](/src/github.com/coldog/sqlkit/db/insert.go) [select.go](/src/github.com/coldog/sqlkit/db/select.go) [update.go](/src/github.com/coldog/sqlkit/db/update.go) 
 
 
 
@@ -83,7 +99,7 @@ var (
 ```
 
 
-## <a name="StdLogger">func</a> [StdLogger](/src/target/db.go?s=614:635#L24)
+## <a name="StdLogger">func</a> [StdLogger](/src/target/db.go?s=466:487#L22)
 ``` go
 func StdLogger(s SQL)
 ```
@@ -92,7 +108,7 @@ StdLogger is a basic logger that uses the "log" package to log sql queries.
 
 
 
-## <a name="DB">type</a> [DB](/src/target/db.go?s=2797:2990#L118)
+## <a name="DB">type</a> [DB](/src/target/db.go?s=2649:2842#L116)
 ``` go
 type DB interface {
     Query(context.Context, SQL) *Result
@@ -112,14 +128,14 @@ DB is the interface for the DB object.
 
 
 
-### <a name="New">func</a> [New](/src/target/db.go?s=1494:1521#L57)
+### <a name="New">func</a> [New](/src/target/db.go?s=1346:1373#L55)
 ``` go
 func New(opts ...Option) DB
 ```
 New initializes a new DB agnostic to the underlying SQL connection.
 
 
-### <a name="Open">func</a> [Open](/src/target/db.go?s=1759:1831#L70)
+### <a name="Open">func</a> [Open](/src/target/db.go?s=1611:1683#L68)
 ``` go
 func Open(driverName, dataSourceName string, opts ...Option) (DB, error)
 ```
@@ -243,7 +259,7 @@ Values configures a single row of values.
 
 
 
-## <a name="Option">type</a> [Option](/src/target/db.go?s=826:850#L34)
+## <a name="Option">type</a> [Option](/src/target/db.go?s=678:702#L32)
 ``` go
 type Option func(db *db)
 ```
@@ -255,28 +271,28 @@ Option represents option configurations.
 
 
 
-### <a name="WithConn">func</a> [WithConn](/src/target/db.go?s=1174:1208#L47)
+### <a name="WithConn">func</a> [WithConn](/src/target/db.go?s=1026:1060#L45)
 ``` go
 func WithConn(conn *sql.DB) Option
 ```
 WithConn configures a custom *sql.DB connection.
 
 
-### <a name="WithDialect">func</a> [WithDialect](/src/target/db.go?s=1030:1070#L42)
+### <a name="WithDialect">func</a> [WithDialect](/src/target/db.go?s=882:922#L40)
 ``` go
 func WithDialect(dialect Dialect) Option
 ```
 WithDialect configures the SQL dialect.
 
 
-### <a name="WithEncoder">func</a> [WithEncoder](/src/target/db.go?s=1330:1375#L52)
+### <a name="WithEncoder">func</a> [WithEncoder](/src/target/db.go?s=1182:1227#L50)
 ``` go
 func WithEncoder(enc encoding.Encoder) Option
 ```
 WithEncoder configures a custom encoder if a different mapper were needed.
 
 
-### <a name="WithLogger">func</a> [WithLogger](/src/target/db.go?s=897:937#L37)
+### <a name="WithLogger">func</a> [WithLogger](/src/target/db.go?s=749:789#L35)
 ``` go
 func WithLogger(logger func(SQL)) Option
 ```
@@ -286,7 +302,7 @@ WithLogger configures a logging function.
 
 
 
-## <a name="Result">type</a> [Result](/src/target/db.go?s=3037:3161#L129)
+## <a name="Result">type</a> [Result](/src/target/db.go?s=2889:3013#L127)
 ``` go
 type Result struct {
     *sql.Rows
@@ -306,7 +322,7 @@ Result wraps a database/sql query result.
 
 
 
-### <a name="Result.Decode">func</a> (\*Result) [Decode](/src/target/db.go?s=3329:3381#L141)
+### <a name="Result.Decode">func</a> (\*Result) [Decode](/src/target/db.go?s=3181:3233#L139)
 ``` go
 func (r *Result) Decode(val interface{}) (err error)
 ```
@@ -315,7 +331,7 @@ Decode will decode the results into an interface.
 
 
 
-### <a name="Result.Err">func</a> (\*Result) [Err](/src/target/db.go?s=3229:3257#L138)
+### <a name="Result.Err">func</a> (\*Result) [Err](/src/target/db.go?s=3081:3109#L136)
 ``` go
 func (r *Result) Err() error
 ```
@@ -324,7 +340,7 @@ Err forwards the error that may have come from the connection.
 
 
 
-## <a name="SQL">type</a> [SQL](/src/target/db.go?s=2693:2753#L113)
+## <a name="SQL">type</a> [SQL](/src/target/db.go?s=2545:2605#L111)
 ``` go
 type SQL interface {
     SQL() (string, []interface{}, error)
@@ -339,7 +355,7 @@ arguments.
 
 
 
-### <a name="Raw">func</a> [Raw](/src/target/db.go?s=2384:2429#L98)
+### <a name="Raw">func</a> [Raw](/src/target/db.go?s=2236:2281#L96)
 ``` go
 func Raw(sql string, args ...interface{}) SQL
 ```

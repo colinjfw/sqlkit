@@ -1,5 +1,3 @@
-// Package encoding provides marshalling values to and from SQL. Gracefully
-// handles null values.
 package encoding
 
 import "github.com/jmoiron/sqlx/reflectx"

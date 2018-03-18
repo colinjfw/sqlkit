@@ -1,5 +1,3 @@
-// Package db provides a wrapper around the base database/sql package with a
-// convenient sql builder, transaction handling and encoding features.
 package db
 
 import (

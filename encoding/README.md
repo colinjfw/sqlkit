@@ -11,6 +11,25 @@
 Package encoding provides marshalling values to and from SQL. Gracefully
 handles null values.
 
+The simplest way to use this is to take advantage of the base marhsal and
+unmarshal functions:
+
+
+	db, err := sql.Open("sqlite3", ":memory:")
+	
+	type user struct {
+	ID int `db:"id"`
+	}
+	
+	cols, vals, err := encoding.Marshal(user{1})
+	_, err = db.Exec(
+	"insert into users ("+strings.Join(cols, ",")+") values "+"(?)", vals...,
+	)
+	
+	users := []user{}
+	rows, err := db.Query("select * from users")
+	err = encoding.Unmarsal(&users, rows)
+
 
 
 
@@ -30,7 +49,7 @@ handles null values.
 * [Unmarshal](#example_Unmarshal)
 
 #### <a name="pkg-files">Package files</a>
-[encoding.go](/src/github.com/coldog/sqlkit/encoding/encoding.go) [marshal.go](/src/github.com/coldog/sqlkit/encoding/marshal.go) [unmarshal.go](/src/github.com/coldog/sqlkit/encoding/unmarshal.go) 
+[doc.go](/src/github.com/coldog/sqlkit/encoding/doc.go) [encoding.go](/src/github.com/coldog/sqlkit/encoding/encoding.go) [marshal.go](/src/github.com/coldog/sqlkit/encoding/marshal.go) [unmarshal.go](/src/github.com/coldog/sqlkit/encoding/unmarshal.go) 
 
 
 
@@ -82,7 +101,7 @@ Unmarshal will run Decode with the default Decoder configuration.
 
 
 
-## <a name="Encoder">type</a> [Encoder](/src/target/encoding.go?s=326:387#L11)
+## <a name="Encoder">type</a> [Encoder](/src/target/encoding.go?s=226:287#L9)
 ``` go
 type Encoder struct {
     // contains filtered or unexported fields
@@ -96,7 +115,7 @@ Encoder manages options for encoding.
 
 
 
-### <a name="NewEncoder">func</a> [NewEncoder](/src/target/encoding.go?s=237:262#L8)
+### <a name="NewEncoder">func</a> [NewEncoder](/src/target/encoding.go?s=137:162#L6)
 ``` go
 func NewEncoder() Encoder
 ```
@@ -146,7 +165,7 @@ is not set.
 
 
 
-### <a name="Encoder.Unsafe">func</a> (Encoder) [Unsafe](/src/target/encoding.go?s=578:611#L19)
+### <a name="Encoder.Unsafe">func</a> (Encoder) [Unsafe](/src/target/encoding.go?s=478:511#L17)
 ``` go
 func (e Encoder) Unsafe() Encoder
 ```
@@ -157,7 +176,7 @@ missing fields on unmarshalling.
 
 
 
-### <a name="Encoder.WithMapper">func</a> (Encoder) [WithMapper](/src/target/encoding.go?s=801:856#L26)
+### <a name="Encoder.WithMapper">func</a> (Encoder) [WithMapper](/src/target/encoding.go?s=701:756#L24)
 ``` go
 func (e Encoder) WithMapper(m *reflectx.Mapper) Encoder
 ```
