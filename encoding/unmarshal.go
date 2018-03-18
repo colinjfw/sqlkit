@@ -67,8 +67,7 @@ func (n *nilSafety) Scan(src interface{}) error {
 
 // fieldsByTraversal fills a list of value interfaces. It will also return an
 // error if unsafe is not set and a value is missing in the destination struct.
-func fieldsByTraversal(
-	v reflect.Value, traversals [][]int, values []interface{}, unsafe bool) error {
+func fieldsByTraversal(v reflect.Value, traversals [][]int, values []interface{}, unsafe bool) error {
 	v = reflect.Indirect(v)
 	if v.Kind() != reflect.Struct {
 		return errors.New("argument not a struct")
@@ -239,8 +238,5 @@ func (e Encoder) scanRow(base reflect.Type, value reflect.Value, dest interface{
 
 	// scan into the struct field pointers and append to our results
 	err = rows.Scan(values...)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }

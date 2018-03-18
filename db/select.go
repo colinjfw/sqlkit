@@ -9,18 +9,17 @@ func Select(cols ...string) SelectStmt { return SelectStmt{columns: cols} }
 
 // SelectStmt represents a SELECT in sql.
 type SelectStmt struct {
-	dialect   Dialect
-	columns   []string
-	table     string
-	groupBy   []string
-	orderBy   []string
-	offset    string
-	limit     string
-	join      [][]string
-	where     string
-	returning []string
-	values    []interface{}
-	err       error
+	dialect Dialect
+	columns []string
+	table   string
+	groupBy []string
+	orderBy []string
+	offset  string
+	limit   string
+	join    [][]string
+	where   string
+	values  []interface{}
+	err     error
 }
 
 // Select configures the columns to select.

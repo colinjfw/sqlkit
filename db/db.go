@@ -1,3 +1,5 @@
+// Package db provides a wrapper around the base database/sql package with a
+// convenient sql builder, transaction handling and encoding features.
 package db
 
 import (
@@ -87,7 +89,8 @@ func Open(driverName, dataSourceName string, opts ...Option) (DB, error) {
 		dialect = Generic
 	}
 
-	out := New(WithConn(d), WithDialect(dialect))
+	opts = append(opts, WithConn(d), WithDialect(dialect))
+	out := New(opts...)
 	return out, nil
 }
 
@@ -142,7 +145,11 @@ func (r *Result) Decode(val interface{}) (err error) {
 	if r.Rows == nil {
 		return ErrNotAQuery
 	}
-	defer r.Rows.Close()
+	defer func() {
+		if rErr := r.Rows.Close(); rErr != nil {
+			err = rErr
+		}
+	}()
 	return r.encoder.Decode(val, r.Rows)
 }
 
@@ -227,12 +234,17 @@ func (d *db) Update(table string) UpdateStmt {
 	return UpdateStmt{dialect: d.dialect, table: table, encoder: d.encoder}
 }
 
-func (d *db) Close() error {
+func (d *db) Close() (err error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
 	for _, s := range d.cache {
-		s.Close()
+		if cErr := s.Close(); cErr != nil {
+			err = cErr
+		}
 	}
-	return d.DB.Close()
+	if dErr := d.DB.Close(); dErr != nil {
+		err = dErr
+	}
+	return
 }

@@ -48,3 +48,14 @@ func TestUpdate_InvalidArgs(t *testing.T) {
 		SQL()
 	require.NotNil(t, err)
 }
+
+func TestUpdate_Postgres(t *testing.T) {
+	testSQL(t,
+		"UPDATE users SET c1=$1, c2=$2",
+		[]interface{}{"1", "2"},
+		New(WithDialect(Postgres)).
+			Update("users").
+			Columns("c1", "c2").
+			Values("1", "2"),
+	)
+}

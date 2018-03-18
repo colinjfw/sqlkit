@@ -19,11 +19,13 @@ func Example() {
 		panic(err)
 	}
 
-	err = d.Exec(ctx, d.Insert().Into("test").Value("id", 1)).Err()
-	if err != nil {
-		panic(err)
-	}
-	err = d.Exec(ctx, d.Insert().Into("test").Value("id", 2)).Err()
+	err = d.Exec(
+		ctx,
+		d.Insert().
+			Into("test").
+			Value("id", 1).
+			Value("id", 2),
+	).Err()
 	if err != nil {
 		panic(err)
 	}

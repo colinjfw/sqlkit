@@ -39,7 +39,12 @@ func (m genericMapper) insert(q InsertStmt) string {
 	sql += "INSERT INTO " + q.table + " "
 	sql += "(" + strings.Join(q.columns, ", ") + ") "
 	sql += "VALUES "
-	sql += questions(len(q.values))
+	for i, row := range q.rows {
+		sql += questions(len(row))
+		if i != len(q.rows)-1 {
+			sql += ", "
+		}
+	}
 	return rebind(m.bindType, sql)
 }
 

@@ -12,7 +12,7 @@ type InsertStmt struct {
 	dialect Dialect
 	table   string
 	columns []string
-	values  []interface{}
+	rows    [][]interface{}
 	err     error
 	encoder encoding.Encoder
 }
@@ -29,17 +29,17 @@ func (i InsertStmt) Columns(cols ...string) InsertStmt {
 	return i
 }
 
-// Values configures the values.
+// Values configures a single row of values.
 func (i InsertStmt) Values(vals ...interface{}) InsertStmt {
-	i.values = vals
+	i.rows = append(i.rows, vals)
 	return i
 }
 
-// Value sets one column and one value.
-func (i InsertStmt) Value(name string, val interface{}) InsertStmt {
-	i.values = append(i.values, val)
-	i.columns = append(i.columns, name)
-	return i
+// Value configures a single value insert.
+func (i InsertStmt) Value(column string, value interface{}) InsertStmt {
+	cols := []string{column}
+	vals := []interface{}{value}
+	return i.Row(cols, vals)
 }
 
 // Record will decode using the decoder into a list of fields and values.
@@ -49,16 +49,47 @@ func (i InsertStmt) Record(obj interface{}) InsertStmt {
 		i.err = err
 		return i
 	}
-	i.columns = append(i.columns, cols...)
-	i.values = append(i.values, vals...)
+	return i.Row(cols, vals)
+}
+
+// Row configures a single row into the insert statement. If the columns don't
+// match previous insert statements then an error is forwarded.
+func (i InsertStmt) Row(cols []string, vals []interface{}) InsertStmt {
+	// Only write if nil to allow multiple record calls. Only the first will
+	// configure the columns.
+	if i.columns == nil {
+		i.columns = cols
+	}
+	// Validate that columns are the same for this record.
+	if len(i.columns) != len(cols) {
+		i.err = ErrStatementInvalid
+		return i
+	}
+	for _, c := range cols {
+		var exists bool
+		for _, c2 := range i.columns {
+			if c == c2 {
+				exists = true
+			}
+		}
+		if !exists {
+			i.err = ErrStatementInvalid
+			return i
+		}
+	}
+	i.rows = append(i.rows, vals)
 	return i
 }
 
 // SQL implements the SQL interface.
 func (i InsertStmt) SQL() (string, []interface{}, error) {
-	if len(i.columns) != len(i.values) {
-		return "", nil, ErrStatementInvalid
+	values := []interface{}{}
+	for _, row := range i.rows {
+		if len(i.columns) != len(row) {
+			return "", nil, ErrStatementInvalid
+		}
+		values = append(values, row...)
 	}
 	sql := dialects[i.dialect].insert(i)
-	return sql, i.values, i.err
+	return sql, values, i.err
 }

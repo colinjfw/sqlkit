@@ -84,3 +84,14 @@ func TestSelect_SQLInnerJoin(t *testing.T) {
 			InnerJoin("groups", "users.group_id = groups.id"),
 	)
 }
+
+func TestSelect_SQLPostgres(t *testing.T) {
+	testSQL(t,
+		"SELECT * FROM users WHERE ( name = $1 )",
+		[]interface{}{"test"},
+		SelectStmt{dialect: Postgres}.
+			Select("*").
+			From("users").
+			Where("name = ?", "test"),
+	)
+}
