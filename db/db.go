@@ -22,9 +22,26 @@ func StdLogger(s SQL) {
 type DBOption func(db *db)
 
 func WithLogger(logger func(SQL)) DBOption {
-	return func(db *db) {
-		db.logger = logger
+	return func(db *db) { db.logger = logger }
+}
+
+func WithDialect(dialect Dialect) DBOption {
+	return func(db *db) { db.dialect = dialect }
+}
+
+func WithConn(conn *sql.DB) DBOption {
+	return func(db *db) { db.DB = conn }
+}
+
+func New(opts ...DBOption) DB {
+	out := &db{
+		cache:  map[string]*sql.Stmt{},
+		logger: func(SQL) {},
 	}
+	for _, o := range opts {
+		o(out)
+	}
+	return out
 }
 
 func Open(driverName, dataSourceName string, opts ...DBOption) (DB, error) {
@@ -117,7 +134,7 @@ func (r *Result) unmarshal(val interface{}, first bool) (err error) {
 		if !r.Rows.Next() {
 			return sql.ErrNoRows
 		}
-		return marshal.UnmarshalRow(val, r.Rows)
+		return marshal.Unmarshal(val, r.Rows)
 	}
 	return marshal.UnmarshalRows(val, r.Rows)
 }

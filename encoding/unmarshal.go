@@ -1,4 +1,4 @@
-package marshal
+package encoding
 
 import (
 	"database/sql"
@@ -6,20 +6,21 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/coldog/sqlkit/convert"
 	"github.com/jmoiron/sqlx/reflectx"
 )
 
 var (
 	// ErrRequiresPtr is returned if a non pointer value is passed to Decode.
-	ErrRequiresPtr = errors.New("sqlkit/marshal: non pointer passed to Decode")
+	ErrRequiresPtr = errors.New("sqlkit/encoding: non pointer passed to Decode")
 	// ErrMustNotBeNil is returned if a nil value is passed to Decode.
-	ErrMustNotBeNil = errors.New("sqlkit/marshal: nil value passed to Decode")
+	ErrMustNotBeNil = errors.New("sqlkit/encoding: nil value passed to Decode")
 	// ErrMissingDestination is returned if a destination value is missing and
 	// unsafe is not configured.
-	ErrMissingDestination = errors.New("sqlkit/marshal: missing destination")
+	ErrMissingDestination = errors.New("sqlkit/encoding: missing destination")
 	// ErrTooManyColumns is returned when too many columns are present to scan
 	// into a value.
-	ErrTooManyColumns = errors.New("sqlkit/marshal: too many columns to scan")
+	ErrTooManyColumns = errors.New("sqlkit/encoding: too many columns to scan")
 	// ErrNoRows is mirrored from the database/sql package.
 	ErrNoRows = sql.ErrNoRows
 )
@@ -61,7 +62,7 @@ func (n *nilSafety) Scan(src interface{}) error {
 	if src == nil {
 		return nil
 	}
-	return convertAssign(n.dest, src)
+	return convert.Assign(n.dest, src)
 }
 
 // fieldsByTraversal fills a list of value interfaces. It will also return an
@@ -92,31 +93,7 @@ func fieldsByTraversal(
 
 // Unmarshal will run Decode with the default Decoder configuration.
 func Unmarshal(dest interface{}, rows *sql.Rows) error {
-	return Decoder{}.Decode(dest, rows)
-}
-
-// NewDecoder returns a new Decoder with the default configuration.
-func NewDecoder() Decoder { return Decoder{} }
-
-// Decoder holds settings for decoding from *sql.Rows into struct objects.
-type Decoder struct {
-	unsafe bool
-	mapper *reflectx.Mapper
-}
-
-// Unsafe configures the Decoder to be unsafe, meaning that the Decoder can lose
-// information by skipping over fields that do not exist in the destination
-// struct.
-func (e Decoder) Unsafe() Decoder {
-	e.unsafe = true
-	return e
-}
-
-// WithMapper configures the decoder with a reflectx.Mapper for configuring
-// different fields to be decoded. The DefaultMapper is used if this is not set.
-func (e Decoder) WithMapper(m *reflectx.Mapper) Decoder {
-	e.mapper = m
-	return e
+	return Encoder{}.Decode(dest, rows)
 }
 
 // Decode does the work of decoding an *sql.Rows into a struct, array or scalar
@@ -132,7 +109,7 @@ func (e Decoder) WithMapper(m *reflectx.Mapper) Decoder {
 //
 // The rows object is not closed after iteration is completed. The Decode
 // function is thread safe.
-func (e Decoder) Decode(dest interface{}, rows *sql.Rows) error {
+func (e Encoder) Decode(dest interface{}, rows *sql.Rows) error {
 	value := reflect.ValueOf(dest)
 	if value.Kind() != reflect.Ptr {
 		return ErrRequiresPtr
@@ -158,7 +135,7 @@ func (e Decoder) Decode(dest interface{}, rows *sql.Rows) error {
 	return rows.Err()
 }
 
-func (e Decoder) scanAll(slice reflect.Type, value reflect.Value, rows *sql.Rows) error {
+func (e Encoder) scanAll(slice reflect.Type, value reflect.Value, rows *sql.Rows) error {
 	direct := reflect.Indirect(value)
 	isPtr := slice.Elem().Kind() == reflect.Ptr
 	base := reflectx.Deref(slice.Elem())
@@ -224,7 +201,7 @@ func (e Decoder) scanAll(slice reflect.Type, value reflect.Value, rows *sql.Rows
 	return nil
 }
 
-func (e Decoder) scanRow(base reflect.Type, value reflect.Value, dest interface{}, rows *sql.Rows) error {
+func (e Encoder) scanRow(base reflect.Type, value reflect.Value, dest interface{}, rows *sql.Rows) error {
 	m := DefaultMapper
 	if e.mapper != nil {
 		m = e.mapper

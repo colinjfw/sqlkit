@@ -1,4 +1,4 @@
-package marshal
+package encoding
 
 import (
 	"database/sql"
@@ -370,16 +370,6 @@ func TestUnmarshal_Missing(t *testing.T) {
 		dest := &allTypes{}
 		err = Unmarshal(dest, rows)
 		require.Equal(t, ErrMissingDestination, err)
-
-		// rows2, err := db.Query(`select * from users`)
-		// require.Nil(t, err)
-		// //	defer rows2.Close()
-
-		// err = NewDecoder().Unsafe().Decode(dest, rows2)
-		// require.Nil(t, err)
-		// require.Equal(t, 1, dest.ID)
-		// require.Equal(t, 2, dest.TInt)
-		// spew.Dump(dest)
 	})
 }
 
@@ -407,7 +397,7 @@ func TestUnmarshal_MissingUnsafe(t *testing.T) {
 
 		dest := &allTypes{}
 
-		err = NewDecoder().Unsafe().Decode(dest, rows)
+		err = NewEncoder().Unsafe().Decode(dest, rows)
 		require.Nil(t, err)
 		require.Equal(t, 1, dest.ID)
 		require.Equal(t, 2, dest.TInt)

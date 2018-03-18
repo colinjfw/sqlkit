@@ -1,4 +1,4 @@
-package marshal
+package encoding
 
 import (
 	"testing"
