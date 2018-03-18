@@ -1,0 +1,4 @@
+{
+  "Exclude": ["SQL string concatenation"],
+  "Cyclo": 20
+}
