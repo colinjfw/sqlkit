@@ -349,7 +349,7 @@ Raw implements the SQL intorerface for providing SQL queries.
 
 
 
-## <a name="SelectStmt">type</a> [SelectStmt](/src/target/select.go?s=190:451#L11)
+## <a name="SelectStmt">type</a> [SelectStmt](/src/target/select.go?s=190:409#L11)
 ``` go
 type SelectStmt struct {
     // contains filtered or unexported fields
@@ -373,7 +373,7 @@ Select returns a new SelectStmt.
 
 
 
-### <a name="SelectStmt.From">func</a> (SelectStmt) [From](/src/target/select.go?s=614:663#L33)
+### <a name="SelectStmt.From">func</a> (SelectStmt) [From](/src/target/select.go?s=572:621#L32)
 ``` go
 func (q SelectStmt) From(table string) SelectStmt
 ```
@@ -382,7 +382,7 @@ From configures the table.
 
 
 
-### <a name="SelectStmt.GroupBy">func</a> (SelectStmt) [GroupBy](/src/target/select.go?s=955:1012#L47)
+### <a name="SelectStmt.GroupBy">func</a> (SelectStmt) [GroupBy](/src/target/select.go?s=913:970#L46)
 ``` go
 func (q SelectStmt) GroupBy(groupBy ...string) SelectStmt
 ```
@@ -391,7 +391,7 @@ GroupBy configures the GROUP BY clause.
 
 
 
-### <a name="SelectStmt.InnerJoin">func</a> (SelectStmt) [InnerJoin](/src/target/select.go?s=1768:1826#L78)
+### <a name="SelectStmt.InnerJoin">func</a> (SelectStmt) [InnerJoin](/src/target/select.go?s=1726:1784#L77)
 ``` go
 func (q SelectStmt) InnerJoin(table, on string) SelectStmt
 ```
@@ -400,7 +400,7 @@ InnerJoin adds a join of type INNER.
 
 
 
-### <a name="SelectStmt.Join">func</a> (SelectStmt) [Join](/src/target/select.go?s=1538:1620#L71)
+### <a name="SelectStmt.Join">func</a> (SelectStmt) [Join](/src/target/select.go?s=1496:1578#L70)
 ``` go
 func (q SelectStmt) Join(kind, table, on string, values ...interface{}) SelectStmt
 ```
@@ -409,7 +409,7 @@ Join adds a join statement of a specific kind.
 
 
 
-### <a name="SelectStmt.LeftJoin">func</a> (SelectStmt) [LeftJoin](/src/target/select.go?s=1905:1962#L83)
+### <a name="SelectStmt.LeftJoin">func</a> (SelectStmt) [LeftJoin](/src/target/select.go?s=1863:1920#L82)
 ``` go
 func (q SelectStmt) LeftJoin(table, on string) SelectStmt
 ```
@@ -418,7 +418,7 @@ LeftJoin adds a join of type LEFT.
 
 
 
-### <a name="SelectStmt.Limit">func</a> (SelectStmt) [Limit](/src/target/select.go?s=1378:1425#L65)
+### <a name="SelectStmt.Limit">func</a> (SelectStmt) [Limit](/src/target/select.go?s=1336:1383#L64)
 ``` go
 func (q SelectStmt) Limit(limit int) SelectStmt
 ```
@@ -427,7 +427,7 @@ Limit configures the LIMIT clause.
 
 
 
-### <a name="SelectStmt.Offset">func</a> (SelectStmt) [Offset](/src/target/select.go?s=1226:1275#L59)
+### <a name="SelectStmt.Offset">func</a> (SelectStmt) [Offset](/src/target/select.go?s=1184:1233#L58)
 ``` go
 func (q SelectStmt) Offset(offset int) SelectStmt
 ```
@@ -436,7 +436,7 @@ Offset configures the OFFSET clause.
 
 
 
-### <a name="SelectStmt.OrderBy">func</a> (SelectStmt) [OrderBy](/src/target/select.go?s=1092:1149#L53)
+### <a name="SelectStmt.OrderBy">func</a> (SelectStmt) [OrderBy](/src/target/select.go?s=1050:1107#L52)
 ``` go
 func (q SelectStmt) OrderBy(orderBy ...string) SelectStmt
 ```
@@ -445,7 +445,7 @@ OrderBy configures the ORDER BY clause.
 
 
 
-### <a name="SelectStmt.RightJoin">func</a> (SelectStmt) [RightJoin](/src/target/select.go?s=2042:2100#L88)
+### <a name="SelectStmt.RightJoin">func</a> (SelectStmt) [RightJoin](/src/target/select.go?s=2000:2058#L87)
 ``` go
 func (q SelectStmt) RightJoin(table, on string) SelectStmt
 ```
@@ -454,7 +454,7 @@ RightJoin adds a join of type RIGHT.
 
 
 
-### <a name="SelectStmt.SQL">func</a> (SelectStmt) [SQL](/src/target/select.go?s=2178:2234#L93)
+### <a name="SelectStmt.SQL">func</a> (SelectStmt) [SQL](/src/target/select.go?s=2136:2192#L92)
 ``` go
 func (q SelectStmt) SQL() (string, []interface{}, error)
 ```
@@ -463,7 +463,7 @@ SQL implements the SQL interface.
 
 
 
-### <a name="SelectStmt.Select">func</a> (SelectStmt) [Select](/src/target/select.go?s=497:550#L27)
+### <a name="SelectStmt.Select">func</a> (SelectStmt) [Select](/src/target/select.go?s=455:508#L26)
 ``` go
 func (q SelectStmt) Select(cols ...string) SelectStmt
 ```
@@ -472,7 +472,7 @@ Select configures the columns to select.
 
 
 
-### <a name="SelectStmt.Where">func</a> (SelectStmt) [Where](/src/target/select.go?s=734:807#L39)
+### <a name="SelectStmt.Where">func</a> (SelectStmt) [Where](/src/target/select.go?s=692:765#L38)
 ``` go
 func (q SelectStmt) Where(where string, values ...interface{}) SelectStmt
 ```
