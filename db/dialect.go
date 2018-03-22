@@ -1,3 +1,8 @@
+// Copyright (C) 2018 Colin Walker
+//
+// This software may be modified and distributed under the terms
+// of the MIT license.  See the LICENSE file for details.
+
 package db
 
 // Dialect represents the SQL dialect type.
