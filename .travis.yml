@@ -8,6 +8,9 @@ go: "1.10"
 
 install:
 - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+- go get -u gopkg.in/alecthomas/gometalinter.v2
+- gometalinter.v2 --install
+- mv $GOPATH/bin/gometalinter.v2 $GOPATH/bin/gometalinter
 
 script: make ci
 
