@@ -1,6 +1,10 @@
-The MIT License (MIT)
-
 Copyright (c) 2018 Colin Walker
+Copyright (c) 2013 Jason Moiron
+Copyright (c) 2011 The Go Authors
+
+This project is licensed under the MIT license, with exception of convert
+which is licensed under the 3 clause BSD license to The Go Authors which can be
+found here https://github.com/golang/go/blob/master/LICENSE.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
