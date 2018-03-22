@@ -11,8 +11,13 @@ install:
 - go get -u gopkg.in/alecthomas/gometalinter.v2
 - gometalinter.v2 --install
 - mv $GOPATH/bin/gometalinter.v2 $GOPATH/bin/gometalinter
+- dep ensure
 
-script: make ci
+script:
+- make test
+
+after_script:
+- bash <(curl -s https://codecov.io/bash) -f coverage.txt
 
 cache:
   directories:
