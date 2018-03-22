@@ -10,6 +10,7 @@ docs:
 	godoc2md github.com/coldog/sqlkit/db > ./db/README.md
 
 ci:
+	dep ensure
 	go test -i $(PACKAGES)
 	gometalinter $(PACKAGES)
 	go test -coverprofile=coverage.txt -covermode=atomic $(PACKAGES)
