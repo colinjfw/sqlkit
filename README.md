@@ -10,8 +10,6 @@ Multipurpose SQL packages for GO programs.
 
 Marshal to structs to and from SQL. Gracefully handles null values.
 
-Example:
-
 ```go
 cols, vals, err := encoding.Marshal(user{1})
 _, err = db.Exec(
@@ -27,10 +25,8 @@ err = encoding.Unmarsal(&users, rows)
 
 Basic SQL query builder for SQL which handles marshalling and unmarshalling values.
 
-Example:
-
 ```go
-err = d.Exec(ctx, d.Insert(). Into("test"). Value("id", 2)).Err()
+err = d.Exec(ctx, d.Insert().Into("test").Value("id", 2)).Err()
 
 var rows []int
 err = d.Query(ctx, d.Select("*").From("test")).Decode(&rows)
