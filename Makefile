@@ -10,12 +10,8 @@ docs:
 	godoc2md github.com/coldog/sqlkit/db > ./db/README.md
 
 ci:
-	@go test -coverprofile=coverage_db.txt -covermode=atomic ./db
-	@go test -coverprofile=coverage_encoding.txt -covermode=atomic ./encoding
-	echo '' > coverage.txt
-	cat coverage_db.txt >> coverage.txt
-	cat coverage_encoding.txt >> coverage.txt
-	rm coverage_db.txt
-	rm coverage_encoding.txt
-	bash -c 'bash <(curl -s https://codecov.io/bash)'
+	go test -i $(PACKAGES)
+	gometalinter $(PACKAGES)
+	go test -coverprofile=coverage.txt -covermode=atomic $(PACKAGES)
+	bash -c 'bash <(curl -s https://codecov.io/bash) -f coverage.txt'
 	rm coverage.txt
