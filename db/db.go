@@ -59,12 +59,12 @@ func WithEncoder(enc encoding.Encoder) Option {
 // New initializes a new DB agnostic to the underlying SQL connection.
 func New(opts ...Option) DB {
 	out := &db{
-		cache:  map[string]*sql.Stmt{},
 		logger: func(SQL) {},
 	}
 	for _, o := range opts {
 		o(out)
 	}
+	out.cache = getCache(out.DB)
 	return out
 }
 
@@ -117,11 +117,21 @@ type SQL interface {
 	SQL() (string, []interface{}, error)
 }
 
+// TX represents a transaction.
+type TX interface {
+	context.Context
+
+	Rollback() error
+	Commit() error
+}
+
 // DB is the interface for the DB object.
 type DB interface {
 	Query(context.Context, SQL) *Result
 	Exec(context.Context, SQL) *Result
 	Close() error
+
+	Begin(context.Context) (TX, error)
 
 	Select(cols ...string) SelectStmt
 	Insert() InsertStmt
@@ -156,17 +166,24 @@ func (r *Result) Decode(val interface{}) (err error) {
 	return r.encoder.Decode(val, r.Rows)
 }
 
-type db struct {
-	*sql.DB
-
-	encoder encoding.Encoder
-	dialect Dialect
-	lock    sync.RWMutex
-	cache   map[string]*sql.Stmt
-	logger  func(SQL)
+type preparer interface {
+	PrepareContext(context.Context, string) (*sql.Stmt, error)
 }
 
-func (d *db) stmt(ctx context.Context, str string) (*sql.Stmt, error) {
+func getCache(prep preparer) *cache {
+	return &cache{
+		prep:  prep,
+		cache: map[string]*sql.Stmt{},
+	}
+}
+
+type cache struct {
+	prep  preparer
+	lock  sync.RWMutex
+	cache map[string]*sql.Stmt
+}
+
+func (d *cache) stmt(ctx context.Context, str string) (*sql.Stmt, error) {
 	d.lock.RLock()
 	s, ok := d.cache[str]
 	d.lock.RUnlock()
@@ -176,12 +193,56 @@ func (d *db) stmt(ctx context.Context, str string) (*sql.Stmt, error) {
 
 	d.lock.Lock()
 	defer d.lock.Unlock()
-	s, err := d.PrepareContext(ctx, str)
+	s, err := d.prep.PrepareContext(ctx, str)
 	if err != nil {
 		return nil, err
 	}
 	d.cache[str] = s
 	return s, nil
+}
+
+func (d *cache) close() (err error) {
+	for _, st := range d.cache {
+		if sErr := st.Close(); sErr != nil {
+			err = sErr
+		}
+	}
+	return
+}
+
+type db struct {
+	*sql.DB
+
+	encoder encoding.Encoder
+	dialect Dialect
+	lock    sync.RWMutex
+	cache   *cache
+	logger  func(SQL)
+}
+
+type tx struct {
+	context.Context
+	*sql.Tx
+	cache *cache
+}
+
+func (d *db) Begin(ctx context.Context) (TX, error) {
+	if t, ok := ctx.(TX); ok {
+		// TODO: Handle nested transactions here.
+		return t, nil
+	}
+
+	stx, err := d.DB.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	t := &tx{
+		Context: ctx,
+		Tx:      stx,
+		cache:   getCache(stx),
+	}
+	return t, nil
 }
 
 func (d *db) Query(ctx context.Context, q SQL) *Result {
@@ -191,7 +252,15 @@ func (d *db) Query(ctx context.Context, q SQL) *Result {
 	if err != nil {
 		return &Result{err: err}
 	}
-	st, err := d.stmt(ctx, sql)
+
+	var c *cache
+	if t, ok := ctx.(*tx); ok {
+		c = t.cache
+	} else {
+		c = d.cache
+	}
+
+	st, err := c.stmt(ctx, sql)
 	if err != nil {
 		return &Result{err: err}
 	}
@@ -206,10 +275,17 @@ func (d *db) Exec(ctx context.Context, q SQL) *Result {
 	if err != nil {
 		return &Result{err: err}
 	}
-	st, err := d.stmt(ctx, sql)
+	var c *cache
+	if t, ok := ctx.(*tx); ok {
+		c = t.cache
+	} else {
+		c = d.cache
+	}
+	st, err := c.stmt(ctx, sql)
 	if err != nil {
 		return &Result{err: err}
 	}
+
 	r, err := st.ExecContext(ctx, args...)
 	var lastID int64
 	var affected int64
@@ -240,11 +316,8 @@ func (d *db) Update(table string) UpdateStmt {
 func (d *db) Close() (err error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
-
-	for _, s := range d.cache {
-		if cErr := s.Close(); cErr != nil {
-			err = cErr
-		}
+	if cErr := d.cache.close(); cErr != nil {
+		err = cErr
 	}
 	if dErr := d.DB.Close(); dErr != nil {
 		err = dErr
