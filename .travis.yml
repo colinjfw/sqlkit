@@ -6,6 +6,9 @@ env:
 
 go: "1.10"
 
+install:
+- curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+
 script: make ci
 
 cache:
