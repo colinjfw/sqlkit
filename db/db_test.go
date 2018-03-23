@@ -134,3 +134,99 @@ func TestDB_Marshal(t *testing.T) {
 
 	require.Nil(t, db.Close())
 }
+
+func TestDB_TxBegin(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	ctx, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	defer func() { require.Nil(t, ctx.Rollback()) }()
+
+	err = db.Exec(ctx,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	require.Nil(t, ctx.Commit())
+}
+
+func TestDB_TxRollback(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	ctx, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	err = db.Exec(ctx,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	require.Nil(t, ctx.Rollback())
+}
+
+func TestDB_TxAlreadyDone(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	ctx, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	err = db.Exec(ctx,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	require.Nil(t, ctx.Rollback())
+
+	err = db.Exec(ctx,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Error(t, err)
+}
+
+func TestDB_TxNested(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	ctx, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	defer func() { require.Nil(t, ctx.Rollback()) }()
+
+	err = db.Exec(ctx,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	func() {
+		ctx, err := db.Begin(ctx)
+		require.Nil(t, err)
+
+		defer func() { require.Nil(t, ctx.Rollback()) }()
+
+		var count int
+		db.Query(ctx, db.Select("count(*)").From("users")).Decode(&count)
+		require.Equal(t, 0, count)
+
+		require.Nil(t, ctx.Commit())
+	}()
+
+	func() {
+		ctx, err := db.Begin(ctx)
+		require.Nil(t, err)
+
+		var count int
+		db.Query(ctx, db.Select("count(*)").From("users")).Decode(&count)
+		require.Equal(t, 0, count)
+
+		require.Nil(t, ctx.Rollback())
+	}()
+
+	require.Nil(t, ctx.Commit())
+}

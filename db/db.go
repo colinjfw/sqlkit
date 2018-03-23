@@ -9,8 +9,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/coldog/sqlkit/encoding"
@@ -223,15 +225,68 @@ type db struct {
 type tx struct {
 	context.Context
 	*sql.Tx
-	cache *cache
+	cache     *cache
+	savepoint string
+	logger    func(SQL)
+	done      uint32
+}
+
+func (t *tx) beginSavepoint() (string, error) {
+	name := fmt.Sprintf("s_%d", time.Now().UnixNano())
+	_, err := t.Tx.Exec("SAVEPOINT " + name)
+	t.logger(Raw("SAVEPOINT " + name))
+	return name, err
+}
+
+func (t *tx) releaseSavepoint() error {
+	_, err := t.Tx.Exec("RELEASE SAVEPOINT " + t.savepoint)
+	t.logger(Raw("RELEASE SAVEPOINT " + t.savepoint))
+	return err
+}
+
+func (t *tx) rollbackSavepoint() error {
+	_, err := t.Tx.Exec("ROLLBACK TO SAVEPOINT " + t.savepoint)
+	t.logger(Raw("ROLLBACK TO SAVEPOINT " + t.savepoint))
+	return err
+}
+
+func (t *tx) Commit() error {
+	atomic.StoreUint32(&t.done, 1)
+	if t.savepoint != "" {
+		return t.releaseSavepoint()
+	}
+	t.logger(Raw("COMMIT"))
+	return t.Tx.Commit()
+}
+
+func (t *tx) Rollback() error {
+	isDone := atomic.LoadUint32(&t.done)
+	if isDone == 1 {
+		return nil
+	}
+	if t.savepoint != "" {
+		return t.rollbackSavepoint()
+	}
+	t.logger(Raw("ROLLBACK"))
+	return t.Tx.Rollback()
 }
 
 func (d *db) Begin(ctx context.Context) (TX, error) {
-	if t, ok := ctx.(TX); ok {
-		// TODO: Handle nested transactions here.
-		return t, nil
+	if t, ok := ctx.(*tx); ok {
+		name, err := t.beginSavepoint()
+		if err != nil {
+			return nil, err
+		}
+		return &tx{
+			Context:   t.Context,
+			Tx:        t.Tx,
+			cache:     t.cache,
+			savepoint: name,
+			logger:    d.logger,
+		}, nil
 	}
 
+	d.logger(Raw("BEGIN"))
 	stx, err := d.DB.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return nil, err
@@ -241,6 +296,7 @@ func (d *db) Begin(ctx context.Context) (TX, error) {
 		Context: ctx,
 		Tx:      stx,
 		cache:   getCache(stx),
+		logger:  d.logger,
 	}
 	return t, nil
 }
