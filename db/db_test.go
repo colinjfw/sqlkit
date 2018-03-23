@@ -195,17 +195,17 @@ func TestDB_TxNested(t *testing.T) {
 
 	defer db.Close()
 
-	ctx, err := db.Begin(context.Background())
+	parent, err := db.Begin(context.Background())
 	require.Nil(t, err)
 
-	defer func() { require.Nil(t, ctx.Rollback()) }()
+	defer func() { require.Nil(t, parent.Rollback()) }()
 
-	err = db.Exec(ctx,
+	err = db.Exec(parent,
 		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
 	require.Nil(t, err)
 
 	func() {
-		ctx, err := db.Begin(ctx)
+		ctx, err := db.Begin(parent)
 		require.Nil(t, err)
 
 		defer func() { require.Nil(t, ctx.Rollback()) }()
@@ -218,7 +218,7 @@ func TestDB_TxNested(t *testing.T) {
 	}()
 
 	func() {
-		ctx, err := db.Begin(ctx)
+		ctx, err := db.Begin(parent)
 		require.Nil(t, err)
 
 		var count int
@@ -228,5 +228,5 @@ func TestDB_TxNested(t *testing.T) {
 		require.Nil(t, ctx.Rollback())
 	}()
 
-	require.Nil(t, ctx.Commit())
+	require.Nil(t, parent.Commit())
 }
