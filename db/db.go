@@ -127,29 +127,43 @@ type SQL interface {
 	SQL() (string, []interface{}, error)
 }
 
-// TX represents a transaction. It contains a context as well as Commit and
-// Rollback calls.
+// TX represents a transaction. It contains a context as well as commit and
+// rollback calls. It implements the Context interface so it can be passed into
+// the query and exec calls.
 type TX interface {
 	context.Context
 
+	// Rollback will rollback the current transaction. If this is a savepoint
+	// then the savepoint will be rolled back.
 	Rollback() error
+	// Commit will commit the current transaction. If this is a savepoint then
+	// the savepoint will be released.
 	Commit() error
 }
 
 // DB is the interface for the DB object.
 type DB interface {
+	// Query will execute an SQL query returning a result object. If the context
+	// is a transaction then this will be used to run the query.
 	Query(context.Context, SQL) *Result
+	// Exec will execute an SQL query returning a result object. If the context
+	// is a transaction then this will be used to run the query.
 	Exec(context.Context, SQL) *Result
+	// Close will close the underlying DB connection.
 	Close() error
-
+	// Begin will create a new transaction. If the passed in context is a TX
+	// then a savepoint will be used.
 	Begin(context.Context) (TX, error)
-
+	// Select returns a SelectStmt for the dialect.
 	Select(cols ...string) SelectStmt
+	// Insert returns an InsertStmt for the dialect.
 	Insert() InsertStmt
+	// Update returns an UpdateStmt for the dialect.
 	Update(string) UpdateStmt
 }
 
-// Result wraps a database/sql query result.
+// Result wraps a database/sql query result. It returns the same result for both
+// Exec and Query responses.
 type Result struct {
 	*sql.Rows
 	LastID       int64
@@ -182,10 +196,7 @@ type preparer interface {
 }
 
 func getCache(prep preparer) *cache {
-	return &cache{
-		prep:  prep,
-		cache: map[string]*sql.Stmt{},
-	}
+	return &cache{prep: prep, cache: map[string]*sql.Stmt{}}
 }
 
 type cache struct {
