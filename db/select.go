@@ -82,7 +82,10 @@ func insertQuestions(str string, insertAt, count int) (string, error) {
 }
 
 // Where configures the WHERE clause. It expects values to be interpolated using
-// the question (?) mark parameter.
+// the question (?) mark parameter. For values that are slices, the question
+// mark will be transformed in the where query. This means that IN queries can
+// be writted without knowing the specific number of arguments needed in the
+// array.
 func (q SelectStmt) Where(where string, values ...interface{}) SelectStmt {
 	var err error
 	for i, arg := range values {
