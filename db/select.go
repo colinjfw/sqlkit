@@ -6,6 +6,8 @@
 package db
 
 import (
+	"fmt"
+	"reflect"
 	"strconv"
 )
 
@@ -39,9 +41,61 @@ func (q SelectStmt) From(table string) SelectStmt {
 	return q
 }
 
-// Where configures the WHERE clause.
+// isSlice checks if the value is a slice, if it is, it returns the length and a
+// representation of the slice as an []interface{}.
+func isSlice(i interface{}) (bool, int, []interface{}) {
+	v := reflect.ValueOf(i)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	if v.Kind() == reflect.Slice {
+		l := v.Len()
+		arr := make([]interface{}, l)
+		for i := 0; i < l; i++ {
+			arr[i] = v.Index(i).Interface()
+		}
+		return true, l, arr
+	}
+	return false, 0, nil
+}
+
+// insertQuestions will insert count questions in str at the question mark idx.
+// This turns 'x in ?' into 'x in (?, ?)'.
+func insertQuestions(str string, insertAt, count int) (string, error) {
+	var qIdx int
+	var sIdx int
+	for i, char := range str {
+		if char == '?' {
+			if qIdx == insertAt {
+				sIdx = i
+				break
+			}
+			qIdx++
+		}
+	}
+	if sIdx == 0 {
+		// Couldn't find a question mark at this index.
+		return str, fmt.Errorf(
+			"sqlkit/db: could not find matching '?' at index %d", insertAt)
+	}
+	return str[:sIdx] + questions(count) + str[sIdx+1:], nil
+}
+
+// Where configures the WHERE clause. It expects values to be interpolated using
+// the question (?) mark parameter.
 func (q SelectStmt) Where(where string, values ...interface{}) SelectStmt {
-	// TODO: handle IN () queries.
+	var err error
+	for i, arg := range values {
+		if ok, l, inVals := isSlice(arg); ok {
+			where, err = insertQuestions(where, i, l)
+			inVals = append(inVals, values[i+1:]...)
+			values = append(values[:i], inVals...)
+		}
+	}
+	if err != nil {
+		q.err = err
+		return q
+	}
 	q.where = where
 	q.values = append(q.values, values...)
 	return q
