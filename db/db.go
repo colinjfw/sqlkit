@@ -23,6 +23,9 @@ var (
 	ErrStatementInvalid = errors.New("sqlkit/db: statement invalid")
 	// ErrNotAQuery is returned when Decode is called on an Exec.
 	ErrNotAQuery = errors.New("sqlkit/db: query was not issued")
+	// ErrNestedTransactionsNotAllowed is returned when a nested transaction
+	// cannot be executed.
+	ErrNestedTransactionsNotAllowed = errors.New("sqlkit/db: nested transactions not allowed")
 )
 
 // StdLogger is a basic logger that uses the "log" package to log sql queries.
@@ -56,6 +59,11 @@ func WithConn(conn *sql.DB) Option {
 // WithEncoder configures a custom encoder if a different mapper were needed.
 func WithEncoder(enc encoding.Encoder) Option {
 	return func(db *db) { db.encoder = enc }
+}
+
+// WithDisabledSavepoints will disable savepoints for a database.
+func WithDisabledSavepoints(enc encoding.Encoder) Option {
+	return func(db *db) { db.disableSavepoints = true }
 }
 
 // New initializes a new DB agnostic to the underlying SQL connection.
@@ -119,7 +127,8 @@ type SQL interface {
 	SQL() (string, []interface{}, error)
 }
 
-// TX represents a transaction.
+// TX represents a transaction. It contains a context as well as Commit and
+// Rollback calls.
 type TX interface {
 	context.Context
 
@@ -220,38 +229,72 @@ type db struct {
 	lock    sync.RWMutex
 	cache   *cache
 	logger  func(SQL)
+
+	disableSavepoints bool
 }
 
 type tx struct {
 	context.Context
 	*sql.Tx
+
+	id        int
 	cache     *cache
 	savepoint string
 	logger    func(SQL)
 	done      uint32
 }
 
+func beginSavepointSQL(name string) SQL {
+	return Raw("SAVEPOINT " + name)
+}
+
+func releaseSavepointSQL(name string) SQL {
+	return Raw("RELEASE SAVEPOINT " + name)
+}
+
+func rollbackSavepointSQL(name string) SQL {
+	return Raw("ROLLBACK TO SAVEPOINT " + name)
+}
+
+// beginSavepoint will execute a savepoint for a given transaction. It will use
+// the parent transaction to execute the savepoint command.
 func (t *tx) beginSavepoint() (string, error) {
-	name := fmt.Sprintf("s_%d", time.Now().UnixNano())
-	_, err := t.Tx.Exec("SAVEPOINT " + name)
-	t.logger(Raw("SAVEPOINT " + name))
+	name := fmt.Sprintf("s_%d%d", t.id, time.Now().UnixNano())
+	sql := beginSavepointSQL(name)
+	str, _, _ := sql.SQL()
+	_, err := t.Tx.Exec(str)
+	t.logger(sql)
 	return name, err
 }
 
+// releaseSavepoint will execute the release savepoint command. This is used in
+// committing a savepoint.
 func (t *tx) releaseSavepoint() error {
-	_, err := t.Tx.Exec("RELEASE SAVEPOINT " + t.savepoint)
-	t.logger(Raw("RELEASE SAVEPOINT " + t.savepoint))
+	sql := releaseSavepointSQL(t.savepoint)
+	str, _, _ := sql.SQL()
+	_, err := t.Tx.Exec(str)
+	t.logger(sql)
 	return err
 }
 
+// rollbackSavepoint will execute the rollback savepoint sql.
 func (t *tx) rollbackSavepoint() error {
-	_, err := t.Tx.Exec("ROLLBACK TO SAVEPOINT " + t.savepoint)
-	t.logger(Raw("ROLLBACK TO SAVEPOINT " + t.savepoint))
+	sql := rollbackSavepointSQL(t.savepoint)
+	str, _, _ := sql.SQL()
+	_, err := t.Tx.Exec(str)
+	t.logger(sql)
 	return err
 }
 
 func (t *tx) Commit() error {
-	atomic.StoreUint32(&t.done, 1)
+	select {
+	default:
+	case <-t.Context.Done():
+		return t.Context.Err()
+	}
+	if !atomic.CompareAndSwapUint32(&t.done, 0, 1) {
+		return nil
+	}
 	if t.savepoint != "" {
 		return t.releaseSavepoint()
 	}
@@ -260,8 +303,7 @@ func (t *tx) Commit() error {
 }
 
 func (t *tx) Rollback() error {
-	isDone := atomic.LoadUint32(&t.done)
-	if isDone == 1 {
+	if !atomic.CompareAndSwapUint32(&t.done, 0, 1) {
 		return nil
 	}
 	if t.savepoint != "" {
@@ -273,6 +315,9 @@ func (t *tx) Rollback() error {
 
 func (d *db) Begin(ctx context.Context) (TX, error) {
 	if t, ok := ctx.(*tx); ok {
+		if d.disableSavepoints {
+			return nil, ErrNestedTransactionsNotAllowed
+		}
 		name, err := t.beginSavepoint()
 		if err != nil {
 			return nil, err

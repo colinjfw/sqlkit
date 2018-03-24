@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -228,5 +229,53 @@ func TestDB_TxNested(t *testing.T) {
 		require.Nil(t, ctx.Rollback())
 	}()
 
+	require.Nil(t, parent.Commit())
+}
+
+func TestDB_TxNestedConcurrent(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	parent, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	defer func() { require.Nil(t, parent.Rollback()) }()
+
+	err = db.Exec(parent,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+
+	go func() {
+		ctx, err := db.Begin(parent)
+		require.Nil(t, err)
+
+		defer func() { require.Nil(t, ctx.Rollback()) }()
+
+		var count int
+		db.Query(ctx, db.Select("count(*) as p0").From("users")).Decode(&count)
+		require.Equal(t, 0, count)
+
+		require.Nil(t, ctx.Commit())
+		wg.Done()
+	}()
+
+	go func() {
+		ctx, err := db.Begin(parent)
+		require.Nil(t, err)
+
+		var count int
+		db.Query(ctx, db.Select("count(*) as p1").From("users")).Decode(&count)
+		require.Equal(t, 0, count)
+
+		require.Nil(t, ctx.Commit())
+		wg.Done()
+	}()
+
+	wg.Wait()
 	require.Nil(t, parent.Commit())
 }
