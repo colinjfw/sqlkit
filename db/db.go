@@ -134,11 +134,16 @@ type TX interface {
 	context.Context
 
 	// Rollback will rollback the current transaction. If this is a savepoint
-	// then the savepoint will be rolled back.
+	// then the savepoint will be rolled back. If Rollback or Commit has already
+	// been called then Rollback will take no action and return no error. If the
+	// context is already closed then Rollback will return.
 	Rollback() error
 	// Commit will commit the current transaction. If this is a savepoint then
 	// the savepoint will be released.
 	Commit() error
+	// WithContext will copy the transaction using a new context as the base.
+	// This can be used to set a new context with a cancel or deadline.
+	WithContext(ctx context.Context) TX
 }
 
 // DB is the interface for the DB object.
@@ -248,53 +253,55 @@ type tx struct {
 	context.Context
 	*sql.Tx
 
-	id        int
+	dialect   Dialect
 	cache     *cache
 	savepoint string
 	logger    func(SQL)
 	done      uint32
 }
 
-func beginSavepointSQL(name string) SQL {
-	return Raw("SAVEPOINT " + name)
-}
-
-func releaseSavepointSQL(name string) SQL {
-	return Raw("RELEASE SAVEPOINT " + name)
-}
-
-func rollbackSavepointSQL(name string) SQL {
-	return Raw("ROLLBACK TO SAVEPOINT " + name)
+func (t *tx) WithContext(ctx context.Context) TX {
+	return &tx{
+		Context:   ctx,
+		Tx:        t.Tx,
+		dialect:   t.dialect,
+		cache:     t.cache,
+		savepoint: t.savepoint,
+		logger:    t.logger,
+		done:      t.done,
+	}
 }
 
 // beginSavepoint will execute a savepoint for a given transaction. It will use
 // the parent transaction to execute the savepoint command.
 func (t *tx) beginSavepoint() (string, error) {
-	name := fmt.Sprintf("s_%d%d", t.id, time.Now().UnixNano())
-	sql := beginSavepointSQL(name)
-	str, _, _ := sql.SQL()
-	_, err := t.Tx.Exec(str)
-	t.logger(sql)
+	name := fmt.Sprintf("s%d", time.Now().UnixNano())
+	sql := dialects[t.dialect].beginSavepoint(name)
+	_, err := t.Tx.Exec(sql)
+	t.logger(Raw(sql))
 	return name, err
 }
 
 // releaseSavepoint will execute the release savepoint command. This is used in
 // committing a savepoint.
 func (t *tx) releaseSavepoint() error {
-	sql := releaseSavepointSQL(t.savepoint)
-	str, _, _ := sql.SQL()
-	_, err := t.Tx.Exec(str)
-	t.logger(sql)
+	sql := dialects[t.dialect].releaseSavepoint(t.savepoint)
+	_, err := t.Tx.Exec(sql)
+	t.logger(Raw(sql))
 	return err
 }
 
 // rollbackSavepoint will execute the rollback savepoint sql.
 func (t *tx) rollbackSavepoint() error {
-	sql := rollbackSavepointSQL(t.savepoint)
-	str, _, _ := sql.SQL()
-	_, err := t.Tx.Exec(str)
-	t.logger(sql)
+	sql := dialects[t.dialect].rollbackSavepoint(t.savepoint)
+	_, err := t.Tx.Exec(sql)
+	t.logger(Raw(sql))
 	return err
+}
+
+func (t *tx) awaitCtx() {
+	<-t.Context.Done()
+	t.Rollback()
 }
 
 func (t *tx) Commit() error {
@@ -333,13 +340,17 @@ func (d *db) Begin(ctx context.Context) (TX, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &tx{
+		inner := &tx{
 			Context:   t.Context,
 			Tx:        t.Tx,
 			cache:     t.cache,
 			savepoint: name,
 			logger:    d.logger,
-		}, nil
+		}
+		if inner.Context.Done() != nil {
+			go inner.awaitCtx()
+		}
+		return inner, nil
 	}
 
 	d.logger(Raw("BEGIN"))

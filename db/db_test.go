@@ -8,7 +8,6 @@ package db
 import (
 	"context"
 	"strings"
-	"sync"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -211,9 +210,13 @@ func TestDB_TxNested(t *testing.T) {
 
 		defer func() { require.Nil(t, ctx.Rollback()) }()
 
+		err = db.Exec(ctx, db.Insert().Into("users").Value("id", 1)).Err()
+		require.Nil(t, err)
+
 		var count int
-		db.Query(ctx, db.Select("count(*)").From("users")).Decode(&count)
-		require.Equal(t, 0, count)
+		err = db.Query(ctx, db.Select("count(*)").From("users")).Decode(&count)
+		require.Equal(t, 1, count)
+		require.Nil(t, err)
 
 		require.Nil(t, ctx.Commit())
 	}()
@@ -222,17 +225,26 @@ func TestDB_TxNested(t *testing.T) {
 		ctx, err := db.Begin(parent)
 		require.Nil(t, err)
 
+		err = db.Exec(ctx, db.Insert().Into("users").Value("id", 2)).Err()
+		require.Nil(t, err)
+
 		var count int
-		db.Query(ctx, db.Select("count(*)").From("users")).Decode(&count)
-		require.Equal(t, 0, count)
+		err = db.Query(ctx, db.Select("count(*)").From("users")).Decode(&count)
+		require.Equal(t, 2, count)
+		require.Nil(t, err)
 
 		require.Nil(t, ctx.Rollback())
 	}()
 
+	var count int
+	err = db.Query(parent, db.Select("count(*)").From("users")).Decode(&count)
+	require.Equal(t, 1, count)
+	require.Nil(t, err)
+
 	require.Nil(t, parent.Commit())
 }
 
-func TestDB_TxNestedConcurrent(t *testing.T) {
+func TestDB_TxNestedDouble(t *testing.T) {
 	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
 	require.Nil(t, err)
 
@@ -247,35 +259,71 @@ func TestDB_TxNestedConcurrent(t *testing.T) {
 		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
 	require.Nil(t, err)
 
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
-
-	go func() {
-		ctx, err := db.Begin(parent)
+	func() {
+		outer, err := db.Begin(parent)
 		require.Nil(t, err)
 
-		defer func() { require.Nil(t, ctx.Rollback()) }()
+		defer func() { require.Nil(t, outer.Rollback()) }()
 
-		var count int
-		db.Query(ctx, db.Select("count(*) as p0").From("users")).Decode(&count)
-		require.Equal(t, 0, count)
-
-		require.Nil(t, ctx.Commit())
-		wg.Done()
-	}()
-
-	go func() {
-		ctx, err := db.Begin(parent)
+		err = db.Exec(outer, db.Insert().Into("users").Value("id", 1)).Err()
 		require.Nil(t, err)
 
 		var count int
-		db.Query(ctx, db.Select("count(*) as p1").From("users")).Decode(&count)
-		require.Equal(t, 0, count)
+		err = db.Query(outer, db.Select("count(*)").From("users")).Decode(&count)
+		require.Equal(t, 1, count)
+		require.Nil(t, err)
 
-		require.Nil(t, ctx.Commit())
-		wg.Done()
+		func() {
+			inner, err := db.Begin(outer)
+			require.Nil(t, err)
+
+			defer func() { require.Nil(t, inner.Rollback()) }()
+
+			var count int
+			err = db.Query(inner, db.Select("count(*)").From("users")).Decode(&count)
+			require.Equal(t, 1, count)
+			require.Nil(t, err)
+
+			require.Nil(t, inner.Commit())
+		}()
+
+		require.Nil(t, outer.Commit())
 	}()
 
-	wg.Wait()
+	require.Nil(t, parent.Commit())
+}
+
+func TestDB_TxCancel(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	parent, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	defer func() { require.Nil(t, parent.Rollback()) }()
+
+	err = db.Exec(parent,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	func() {
+		ctx, cancel := context.WithCancel(parent)
+		defer cancel()
+
+		tx, err := db.Begin(parent.WithContext(ctx))
+		require.Nil(t, err)
+		defer tx.Rollback()
+
+		err = db.Exec(tx, db.Insert().Into("users").Value("id", 1)).Err()
+		require.Nil(t, err)
+
+		var count int
+		err = db.Query(tx, db.Select("count(*)").From("users")).Decode(&count)
+		require.Equal(t, 1, count)
+		require.Nil(t, err)
+	}()
+
 	require.Nil(t, parent.Commit())
 }
