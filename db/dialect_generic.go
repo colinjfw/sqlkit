@@ -14,6 +14,18 @@ type genericMapper struct {
 	bindType int
 }
 
+func (m genericMapper) beginSavepoint(name string) string {
+	return "SAVEPOINT " + name
+}
+
+func (m genericMapper) releaseSavepoint(name string) string {
+	return "RELEASE SAVEPOINT " + name
+}
+
+func (m genericMapper) rollbackSavepoint(name string) string {
+	return "ROLLBACK TO SAVEPOINT " + name
+}
+
 func (m genericMapper) query(q SelectStmt) string {
 	var sql string
 	sql += "SELECT " + strings.Join(q.columns, ",") + " "
