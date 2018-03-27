@@ -5,7 +5,11 @@
 
 package db
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestSelect_SQLSelect(t *testing.T) {
 	testSQL(t,
@@ -99,4 +103,29 @@ func TestSelect_SQLPostgres(t *testing.T) {
 			From("users").
 			Where("name = ?", "test"),
 	)
+}
+
+func TestSelect_In(t *testing.T) {
+	arr := []string{"a", "b"}
+	st := Select().Where("a = ? and x in ?", "b", arr)
+
+	require.Equal(t, "a = ? and x in (?, ?)", st.where)
+	require.Equal(t, []interface{}{"b", "a", "b"}, st.values)
+}
+
+func TestSelect_InPtr(t *testing.T) {
+	arr := []string{"a", "b"}
+	st := Select().Where("a = ? and x in ?", "b", &arr)
+
+	require.Equal(t, "a = ? and x in (?, ?)", st.where)
+	require.Equal(t, []interface{}{"b", "a", "b"}, st.values)
+}
+
+func TestSelect_InNone(t *testing.T) {
+	arr := []string{"a", "b"}
+	st := Select().Where("x in", arr)
+
+	require.NotNil(t, st.err)
+	require.Equal(t,
+		"sqlkit/db: could not find matching '?' at index 0", st.err.Error())
 }
