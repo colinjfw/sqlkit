@@ -205,7 +205,8 @@ func TestDB_TxNested(t *testing.T) {
 	require.Nil(t, err)
 
 	func() {
-		ctx, err := db.Begin(parent)
+		var ctx TX
+		ctx, err = db.Begin(parent)
 		require.Nil(t, err)
 
 		defer func() { require.Nil(t, ctx.Rollback()) }()
@@ -222,7 +223,8 @@ func TestDB_TxNested(t *testing.T) {
 	}()
 
 	func() {
-		ctx, err := db.Begin(parent)
+		var ctx TX
+		ctx, err = db.Begin(parent)
 		require.Nil(t, err)
 
 		err = db.Exec(ctx, db.Insert().Into("users").Value("id", 2)).Err()

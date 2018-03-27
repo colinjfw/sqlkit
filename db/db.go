@@ -115,10 +115,11 @@ func Raw(sql string, args ...interface{}) SQL {
 type raw struct {
 	sql  string
 	args []interface{}
+	err  error
 }
 
 func (q raw) SQL() (string, []interface{}, error) {
-	return q.sql, q.args, nil
+	return q.sql, q.args, q.err
 }
 
 // SQL is an interface for an SQL query that contains a string of SQL and
@@ -301,7 +302,9 @@ func (t *tx) rollbackSavepoint() error {
 
 func (t *tx) awaitCtx() {
 	<-t.Context.Done()
-	t.Rollback()
+	if err := t.Rollback(); err != nil {
+		t.logger(raw{err: err})
+	}
 }
 
 func (t *tx) Commit() error {
