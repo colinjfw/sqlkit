@@ -10,7 +10,6 @@ import (
 	"database/sql"
 	"errors"
 	"reflect"
-	"strings"
 
 	"github.com/coldog/sqlkit/convert"
 	"github.com/jmoiron/sqlx/reflectx"
@@ -30,10 +29,6 @@ var (
 	// ErrNoRows is mirrored from the database/sql package.
 	ErrNoRows = sql.ErrNoRows
 )
-
-// DefaultMapper is the default reflectx mapper used. This uses strings.ToLower
-// to map field names.
-var DefaultMapper = reflectx.NewMapperFunc("db", strings.ToLower)
 
 var _scannerInterface = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
 
