@@ -8,10 +8,12 @@ package encoding
 import (
 	"database/sql"
 	"flag"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/jmoiron/sqlx/types"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
@@ -26,6 +28,7 @@ func init() {
 	flag.StringVar(&testdbDriver, "testdb.driver", "sqlite3", "Test database driver")
 	flag.StringVar(&testdbConn, "testdb.conn", ":memory:", "Test database connection url")
 	flag.Parse()
+	DefaultMapper = reflectx.NewMapperFunc("db", strings.ToLower)
 }
 
 const defaultSchema = `

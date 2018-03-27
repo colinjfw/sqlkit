@@ -15,14 +15,21 @@ const (
 	MySQL
 )
 
+// dialects define all available dialects. Currently only differences between
+// them is rebinding the query from `?` to the desired variable placeholder.
 var dialects = map[Dialect]dialectMapper{
 	Generic:  genericMapper{bindType: bindQuestion},
 	Postgres: genericMapper{bindType: bindDollar},
 	MySQL:    genericMapper{bindType: bindQuestion},
 }
 
+// dialectMapper provides a mapper for different dialects.
 type dialectMapper interface {
 	query(q SelectStmt) string
 	insert(i InsertStmt) string
 	update(q UpdateStmt) string
+
+	beginSavepoint(name string) string
+	releaseSavepoint(name string) string
+	rollbackSavepoint(name string) string
 }

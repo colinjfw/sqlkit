@@ -134,3 +134,198 @@ func TestDB_Marshal(t *testing.T) {
 
 	require.Nil(t, db.Close())
 }
+
+func TestDB_TxBegin(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	ctx, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	defer func() { require.Nil(t, ctx.Rollback()) }()
+
+	err = db.Exec(ctx,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	require.Nil(t, ctx.Commit())
+}
+
+func TestDB_TxRollback(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	ctx, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	err = db.Exec(ctx,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	require.Nil(t, ctx.Rollback())
+}
+
+func TestDB_TxAlreadyDone(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	ctx, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	err = db.Exec(ctx,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	require.Nil(t, ctx.Rollback())
+
+	err = db.Exec(ctx,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Error(t, err)
+}
+
+func TestDB_TxNested(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	parent, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	defer func() { require.Nil(t, parent.Rollback()) }()
+
+	err = db.Exec(parent,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	func() {
+		var ctx TX
+		ctx, err = db.Begin(parent)
+		require.Nil(t, err)
+
+		defer func() { require.Nil(t, ctx.Rollback()) }()
+
+		err = db.Exec(ctx, db.Insert().Into("users").Value("id", 1)).Err()
+		require.Nil(t, err)
+
+		var count int
+		err = db.Query(ctx, db.Select("count(*)").From("users")).Decode(&count)
+		require.Equal(t, 1, count)
+		require.Nil(t, err)
+
+		require.Nil(t, ctx.Commit())
+	}()
+
+	func() {
+		var ctx TX
+		ctx, err = db.Begin(parent)
+		require.Nil(t, err)
+
+		err = db.Exec(ctx, db.Insert().Into("users").Value("id", 2)).Err()
+		require.Nil(t, err)
+
+		var count int
+		err = db.Query(ctx, db.Select("count(*)").From("users")).Decode(&count)
+		require.Equal(t, 2, count)
+		require.Nil(t, err)
+
+		require.Nil(t, ctx.Rollback())
+	}()
+
+	var count int
+	err = db.Query(parent, db.Select("count(*)").From("users")).Decode(&count)
+	require.Equal(t, 1, count)
+	require.Nil(t, err)
+
+	require.Nil(t, parent.Commit())
+}
+
+func TestDB_TxNestedDouble(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	parent, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	defer func() { require.Nil(t, parent.Rollback()) }()
+
+	err = db.Exec(parent,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	func() {
+		outer, err := db.Begin(parent)
+		require.Nil(t, err)
+
+		defer func() { require.Nil(t, outer.Rollback()) }()
+
+		err = db.Exec(outer, db.Insert().Into("users").Value("id", 1)).Err()
+		require.Nil(t, err)
+
+		var count int
+		err = db.Query(outer, db.Select("count(*)").From("users")).Decode(&count)
+		require.Equal(t, 1, count)
+		require.Nil(t, err)
+
+		func() {
+			inner, err := db.Begin(outer)
+			require.Nil(t, err)
+
+			defer func() { require.Nil(t, inner.Rollback()) }()
+
+			var count int
+			err = db.Query(inner, db.Select("count(*)").From("users")).Decode(&count)
+			require.Equal(t, 1, count)
+			require.Nil(t, err)
+
+			require.Nil(t, inner.Commit())
+		}()
+
+		require.Nil(t, outer.Commit())
+	}()
+
+	require.Nil(t, parent.Commit())
+}
+
+func TestDB_TxCancel(t *testing.T) {
+	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	require.Nil(t, err)
+
+	defer db.Close()
+
+	parent, err := db.Begin(context.Background())
+	require.Nil(t, err)
+
+	defer func() { require.Nil(t, parent.Rollback()) }()
+
+	err = db.Exec(parent,
+		Raw("CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY)")).Err()
+	require.Nil(t, err)
+
+	func() {
+		ctx, cancel := context.WithCancel(parent)
+		defer cancel()
+
+		tx, err := db.Begin(parent.WithContext(ctx))
+		require.Nil(t, err)
+		defer tx.Rollback()
+
+		err = db.Exec(tx, db.Insert().Into("users").Value("id", 1)).Err()
+		require.Nil(t, err)
+
+		var count int
+		err = db.Query(tx, db.Select("count(*)").From("users")).Decode(&count)
+		require.Equal(t, 1, count)
+		require.Nil(t, err)
+	}()
+
+	require.Nil(t, parent.Commit())
+}
