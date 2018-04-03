@@ -8,8 +8,8 @@ services:
 
 env:
 - SQLKIT_DRIVER=sqlite3 SQLKIT_CONN=":memory:"
-- SQLKIT_DRIVER=mysql SQLKIT_CONN="travis@127.0.0.1/sqlkit"
-- SQLKIT_DRIVER=postgresql SQLKIT_CONN="postgresql://travis@127.0.0.1/sqlkit"
+- SQLKIT_DRIVER=mysql SQLKIT_CONN="travis@tcp(127.0.0.1:3306)/sqlkit"
+- SQLKIT_DRIVER=postgres SQLKIT_CONN="user=travis dbname=sqlkit sslmode=disable"
 
 before_install:
 - mysql -e 'CREATE DATABASE sqlkit;'
