@@ -7,12 +7,31 @@ package db
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
 )
+
+var (
+	testdbDriver string
+	testdbConn   string
+)
+
+func init() {
+	testdbDriver = os.Getenv("SQLKIT_DRIVER")
+	if testdbDriver == "" {
+		testdbDriver = "sqlite3"
+	}
+	testdbConn = os.Getenv("SQLKIT_CONN")
+	if testdbConn == "" {
+		testdbConn = ":memory:"
+	}
+}
 
 func testSQL(t *testing.T, expected string, values []interface{}, sql SQL) {
 	str, vals, err := sql.SQL()
@@ -22,13 +41,13 @@ func testSQL(t *testing.T, expected string, values []interface{}, sql SQL) {
 }
 
 func TestDB_Open(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:")
+	db, err := Open("sqlite3", testdbConn)
 	require.Nil(t, err)
 	require.Nil(t, db.Close())
 }
 
 func TestDB_Query(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	db, err := Open(testdbDriver, testdbConn, WithLogger(StdLogger))
 	require.Nil(t, err)
 
 	ctx := context.Background()
@@ -43,7 +62,7 @@ func TestDB_Query(t *testing.T) {
 }
 
 func TestDB_Insert(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	db, err := Open("sqlite3", testdbConn, WithLogger(StdLogger))
 	require.Nil(t, err)
 
 	ctx := context.Background()
@@ -62,7 +81,7 @@ func TestDB_Insert(t *testing.T) {
 }
 
 func TestDB_CreateUpdateDelete(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	db, err := Open(testdbDriver, testdbConn, WithLogger(StdLogger))
 	require.Nil(t, err)
 
 	ctx := context.Background()
@@ -84,7 +103,7 @@ func TestDB_CreateUpdateDelete(t *testing.T) {
 }
 
 func TestDB_Unmarshal(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	db, err := Open(testdbDriver, testdbConn, WithLogger(StdLogger))
 	require.Nil(t, err)
 
 	obj := []*struct {
@@ -109,7 +128,7 @@ func TestDB_Unmarshal(t *testing.T) {
 }
 
 func TestDB_Marshal(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	db, err := Open(testdbDriver, testdbConn, WithLogger(StdLogger))
 	require.Nil(t, err)
 
 	obj := struct {
@@ -139,7 +158,7 @@ func TestDB_Marshal(t *testing.T) {
 }
 
 func TestDB_TxBegin(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	db, err := Open(testdbDriver, testdbConn, WithLogger(StdLogger))
 	require.Nil(t, err)
 
 	defer db.Close()
@@ -157,7 +176,7 @@ func TestDB_TxBegin(t *testing.T) {
 }
 
 func TestDB_TxRollback(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	db, err := Open(testdbDriver, testdbConn, WithLogger(StdLogger))
 	require.Nil(t, err)
 
 	defer db.Close()
@@ -173,7 +192,7 @@ func TestDB_TxRollback(t *testing.T) {
 }
 
 func TestDB_TxAlreadyDone(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	db, err := Open(testdbDriver, testdbConn, WithLogger(StdLogger))
 	require.Nil(t, err)
 
 	defer db.Close()
@@ -193,7 +212,7 @@ func TestDB_TxAlreadyDone(t *testing.T) {
 }
 
 func TestDB_TxNested(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	db, err := Open(testdbDriver, testdbConn, WithLogger(StdLogger))
 	require.Nil(t, err)
 
 	defer db.Close()
@@ -250,7 +269,7 @@ func TestDB_TxNested(t *testing.T) {
 }
 
 func TestDB_TxNestedDouble(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	db, err := Open(testdbDriver, testdbConn, WithLogger(StdLogger))
 	require.Nil(t, err)
 
 	defer db.Close()
@@ -299,7 +318,7 @@ func TestDB_TxNestedDouble(t *testing.T) {
 }
 
 func TestDB_TxCancel(t *testing.T) {
-	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
+	db, err := Open(testdbDriver, testdbConn, WithLogger(StdLogger))
 	require.Nil(t, err)
 
 	defer db.Close()

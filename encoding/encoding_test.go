@@ -6,10 +6,35 @@
 package encoding
 
 import (
+	"os"
+	"strings"
 	"testing"
+
+	// Drivers for multi test.
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx/reflectx"
+	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/stretchr/testify/require"
 )
+
+var (
+	testdbDriver string
+	testdbConn   string
+)
+
+func init() {
+	testdbDriver = os.Getenv("SQLKIT_DRIVER")
+	if testdbDriver == "" {
+		testdbDriver = "sqlite3"
+	}
+	testdbConn = os.Getenv("SQLKIT_CONN")
+	if testdbConn == "" {
+		testdbConn = ":memory:"
+	}
+	DefaultMapper = reflectx.NewMapperFunc("db", strings.ToLower)
+}
 
 func TestUnderscore(t *testing.T) {
 	require.Equal(t, "created_at", underscore("CreatedAt"))
