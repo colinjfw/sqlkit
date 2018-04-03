@@ -12,7 +12,6 @@ func Delete() DeleteStmt { return DeleteStmt{} }
 type DeleteStmt struct {
 	dialect Dialect
 	sel     SelectStmt
-	err     error
 }
 
 // From configures the table.
