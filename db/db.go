@@ -168,6 +168,8 @@ type DB interface {
 	Insert() InsertStmt
 	// Update returns an UpdateStmt for the dialect.
 	Update(string) UpdateStmt
+	// Delete returns a DeleteStmt for the dialect.
+	Delete() DeleteStmt
 }
 
 // Result wraps a database/sql query result. It returns the same result for both
@@ -431,6 +433,10 @@ func (d *db) Exec(ctx context.Context, q SQL) *Result {
 
 func (d *db) Select(cols ...string) SelectStmt {
 	return SelectStmt{columns: cols, dialect: d.dialect}
+}
+
+func (d *db) Delete() DeleteStmt {
+	return DeleteStmt{dialect: d.dialect}
 }
 
 func (d *db) Insert() InsertStmt {
