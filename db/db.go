@@ -123,7 +123,9 @@ func (q raw) SQL() (string, []interface{}, error) {
 }
 
 // SQL is an interface for an SQL query that contains a string of SQL and
-// arguments.
+// arguments. This is the interface that must be implemented to exec or query on
+// the database. Raw(...) can be used to transform a raw string into an SQL
+// interface.
 type SQL interface {
 	SQL() (string, []interface{}, error)
 }

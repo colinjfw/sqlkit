@@ -13,8 +13,12 @@ import (
 )
 
 func ExampleOpen() {
-	ctx := context.Background()
 	d, err := db.Open("sqlite3", ":memory:", db.WithLogger(db.StdLogger))
+	if err != nil {
+		panic(err)
+	}
+
+	ctx, err := d.Begin(context.Background())
 	if err != nil {
 		panic(err)
 	}

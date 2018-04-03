@@ -7,8 +7,10 @@
 Package encoding provides marshalling values to and from SQL. Gracefully
 handles null values.
 
-The simplest way to use this is to take advantage of the base marhsal and
+The simplest way to use this is to take advantage of the base marshal and
 unmarshal functions:
+
+An example below:
 
   db, err := sql.Open("sqlite3", ":memory:")
 
