@@ -61,7 +61,7 @@ func TestDB_Insert(t *testing.T) {
 	require.Nil(t, db.Close())
 }
 
-func TestDB_Update(t *testing.T) {
+func TestDB_CreateUpdateDelete(t *testing.T) {
 	db, err := Open("sqlite3", ":memory:", WithLogger(StdLogger))
 	require.Nil(t, err)
 
@@ -75,6 +75,9 @@ func TestDB_Update(t *testing.T) {
 	require.Nil(t, err)
 
 	err = db.Exec(ctx, db.Update("users").Value("id", 3).Where("id = ?", 1)).Err()
+	require.Nil(t, err)
+
+	err = db.Exec(ctx, db.Delete().From("users").Where("id = ?", 3)).Err()
 	require.Nil(t, err)
 
 	require.Nil(t, db.Close())
