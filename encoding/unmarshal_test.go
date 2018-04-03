@@ -15,7 +15,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const defaultSchema = `
+var defaultSchemaPG = `
+create table users (
+	id int primary key,
+	tint int,
+	tfloat float,
+	tbytes bytea,
+	tstring text,
+	tbool boolean,
+	ttime timestamp,
+	tjson bytea
+)
+`
+
+var defaultSchema = `
 create table users (
 	id int primary key,
 	tint int,
@@ -32,9 +45,16 @@ const defaultDrop = `
 drop table users
 `
 
+func init() {
+	if testdbDriver == "postgres" {
+		defaultSchema = defaultSchemaPG
+	}
+}
+
 func run(t *testing.T, schema, drop string, cb func(db *sql.DB)) {
 	db, err := sql.Open(testdbDriver, testdbConn)
 	require.Nil(t, err, "failed to open")
+	db.Exec(drop)
 
 	_, err = db.Exec(schema)
 	require.Nil(t, err, "failed to apply schema")
