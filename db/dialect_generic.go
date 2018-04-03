@@ -51,6 +51,18 @@ func (m genericMapper) query(q SelectStmt) string {
 	return rebind(m.bindType, sql)
 }
 
+func (m genericMapper) delete(q DeleteStmt) string {
+	var sql string
+	sql += "DELETE FROM " + q.sel.table + " "
+	for _, join := range q.sel.join {
+		sql += join[0] + " JOIN " + join[1] + " ON " + join[2] + " "
+	}
+	if q.sel.where != "" {
+		sql += "WHERE ( " + q.sel.where + " ) "
+	}
+	return rebind(m.bindType, sql)
+}
+
 func (m genericMapper) insert(q InsertStmt) string {
 	var sql string
 	sql += "INSERT INTO " + q.table + " "

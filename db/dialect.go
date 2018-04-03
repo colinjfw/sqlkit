@@ -28,6 +28,7 @@ type dialectMapper interface {
 	query(q SelectStmt) string
 	insert(i InsertStmt) string
 	update(q UpdateStmt) string
+	delete(q DeleteStmt) string
 
 	beginSavepoint(name string) string
 	releaseSavepoint(name string) string
