@@ -4,6 +4,8 @@
 [![codecov](https://codecov.io/gh/ColDog/sqlkit/branch/master/graph/badge.svg)](https://codecov.io/gh/ColDog/sqlkit)
 [![goreport](https://goreportcard.com/badge/github.com/ColDog/sqlkit)](https://goreportcard.com/report/github.com/ColDog/sqlkit)
 [![godoc](https://godoc.org/github.com/ColDog/sqlkit?status.svg)](https://godoc.org/github.com/ColDog/sqlkit)
+[![release](https://img.shields.io/github/release/ColDog/sqlkit.svg)](https://github.com/ColDog/sqlkit/releases)
+[![license](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Multipurpose SQL packages for GO programs.
 
@@ -15,9 +17,15 @@ Working with SQL in golang is challenging in certain respects. Some of the main 
 
 This project is designed to fix some of these issues. It is heavily influenced by sqlx https://github.com/jmoiron/sqlx but with more opinions on how SQL should be used in projects.
 
+View the [example](example) to see an example of using this project.
+
 ## Status
 
 This project is currently in an ALPHA state. The api is relatively solid for the `encoding` package but may change for the `db` package.
+
+## Versioning
+
+This project follows semantic versioning. Best effort will be maintained to keep backwards compatibility as soon as the api stabilizes at 1.0.0.
 
 ## Packages
 

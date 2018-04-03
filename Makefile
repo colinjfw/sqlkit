@@ -1,4 +1,4 @@
-PACKAGES=./db ./encoding
+PACKAGES=./db ./encoding ./example
 
 test:
 	go test -i $(PACKAGES)
