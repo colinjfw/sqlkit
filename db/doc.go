@@ -4,23 +4,30 @@
 // of the MIT license.  See the LICENSE file for details.
 
 /*
-Package db provides a wrapper around the base database/sql package with a
-convenient sql builder, transaction handling and encoding features.
+Basic SQL query builder for SQL which handles marshalling and unmarshalling values using the `sqlkit/encoding` package. Features include:
 
-The simplest usage of db is below:
+* Query builder for SQL statements.
+* Nested transactions using savepoints.
+* Support for Postgres, MySQL and other sql flavours.
+* Extensible query logging.
+* Expands placeholders for IN (?) queries.
 
-  ctx := context.Background()
-  d, err := db.Open("sqlite3", ":memory:", db.WithLogger(db.StdLogger))
+An example of common API usage:
 
-  err = d.Exec(ctx, d.Insert(). Into("test"). Value("id", 2)).Err()
+	d, err := db.Open("sqlite3", ":memory:", db.WithLogger(db.StdLogger))
 
-  var rows []int
-  err = d.Query(ctx, d.Select("*").From("test")).Decode(&rows)
-  fmt.Printf("%v\n", rows)
+	tx, err := d.Begin(context.Background()) // tx implements context.Context.
+	defer tx.Rollback()
 
-  var count int
-  err = d.Query(ctx, d.Select("count(*)").From("test")).Decode(&count)
-  fmt.Println(count)
+	err = d.Exec(tx, d.Insert().Into("test").Value("id", 2)).Err()
 
+	var rows []int
+	err = d.Query(tx, d.Select("*").From("test")).Decode(&rows)
+	fmt.Printf("%v\n", rows) // Can decode a slice of objects or scalars.
+
+	var count int
+	err = d.Query(tx, d.Select("count(*)").From("test")).Decode(&count)
+	fmt.Println(count) // Can decode single values.
 */
+
 package db
