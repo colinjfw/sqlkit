@@ -7,31 +7,15 @@ package encoding
 
 import (
 	"database/sql"
-	"flag"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/jmoiron/sqlx/reflectx"
 	"github.com/jmoiron/sqlx/types"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	testdbDriver string
-	testdbConn   string
-)
-
-func init() {
-	flag.StringVar(&testdbDriver, "testdb.driver", "sqlite3", "Test database driver")
-	flag.StringVar(&testdbConn, "testdb.conn", ":memory:", "Test database connection url")
-	flag.Parse()
-	DefaultMapper = reflectx.NewMapperFunc("db", strings.ToLower)
-}
-
-const defaultSchema = `
+var defaultSchema = `
 create table users (
 	id int primary key,
 	tint int,
@@ -51,6 +35,7 @@ drop table users
 func run(t *testing.T, schema, drop string, cb func(db *sql.DB)) {
 	db, err := sql.Open(testdbDriver, testdbConn)
 	require.Nil(t, err, "failed to open")
+	db.Exec(drop)
 
 	_, err = db.Exec(schema)
 	require.Nil(t, err, "failed to apply schema")
