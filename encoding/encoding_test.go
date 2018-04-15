@@ -6,7 +6,6 @@
 package encoding
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -25,14 +24,8 @@ var (
 )
 
 func init() {
-	testdbDriver = os.Getenv("SQLKIT_DRIVER")
-	if testdbDriver == "" {
-		testdbDriver = "sqlite3"
-	}
-	testdbConn = os.Getenv("SQLKIT_CONN")
-	if testdbConn == "" {
-		testdbConn = ":memory:"
-	}
+	testdbDriver = "sqlite3"
+	testdbConn = ":memory:"
 	DefaultMapper = reflectx.NewMapperFunc("db", strings.ToLower)
 }
 
