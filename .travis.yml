@@ -15,11 +15,6 @@ before_install:
 - mysql -e 'CREATE DATABASE sqlkit;'
 - psql -c 'create database sqlkit;' -U postgres
 
-install:
-- go get -u gopkg.in/alecthomas/gometalinter.v2
-- gometalinter.v2 --install
-- mv $GOPATH/bin/gometalinter.v2 $GOPATH/bin/gometalinter
-
 script:
 - make test
 
