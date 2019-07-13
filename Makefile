@@ -7,6 +7,7 @@ lint:
 test:
 	@echo "testing $$SQLKIT_DRIVER $$SQLKIT_CONN"
 	go test -v -race -coverprofile=coverage.txt -covermode=atomic $(PACKAGES)
+	@echo "--- PASS ---"
 .PHONY: test
 
 services:
