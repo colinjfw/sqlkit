@@ -105,7 +105,7 @@ func Unmarshal(dest interface{}, rows *sql.Rows) error {
 // * If the values inside the array are scalar, then the decoder will check for
 //   only a single column to scan and scan this in.
 // * If a single struct or scalar is passed in the decoder will loop once over
-//   the rows returning sql.ErrNoRows if this is improssible and scan the value.
+//   the rows returning sql.ErrNoRows if this is possible and scan the value.
 //
 // The rows object is not closed after iteration is completed. The Decode
 // function is thread safe.
