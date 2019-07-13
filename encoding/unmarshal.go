@@ -11,7 +11,7 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/coldog/sqlkit/convert"
+	"github.com/colinjfw/sqlkit/convert"
 	"github.com/jmoiron/sqlx/reflectx"
 )
 

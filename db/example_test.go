@@ -9,7 +9,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/coldog/sqlkit/db"
+	"github.com/colinjfw/sqlkit/db"
 )
 
 func ExampleOpen() {

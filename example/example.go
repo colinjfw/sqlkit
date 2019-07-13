@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/coldog/sqlkit/db"
+	"github.com/colinjfw/sqlkit/db"
 )
 
 func uuid() string {

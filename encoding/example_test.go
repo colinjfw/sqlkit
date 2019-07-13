@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coldog/sqlkit/encoding"
+	"github.com/colinjfw/sqlkit/encoding"
 )
 
 func ExampleMarshal() {

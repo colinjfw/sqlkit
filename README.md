@@ -1,10 +1,10 @@
 # SQLKit
 
-[![travis](https://travis-ci.org/ColDog/sqlkit.svg?branch=master)](https://travis-ci.org/ColDog/sqlkit.svg?branch=master)
-[![codecov](https://codecov.io/gh/ColDog/sqlkit/branch/master/graph/badge.svg)](https://codecov.io/gh/ColDog/sqlkit)
-[![goreport](https://goreportcard.com/badge/github.com/ColDog/sqlkit)](https://goreportcard.com/report/github.com/ColDog/sqlkit)
-[![godoc](https://godoc.org/github.com/ColDog/sqlkit?status.svg)](https://godoc.org/github.com/ColDog/sqlkit)
-[![release](https://img.shields.io/github/release/ColDog/sqlkit.svg)](https://github.com/ColDog/sqlkit/releases)
+[![travis](https://travis-ci.org/colinjfw/sqlkit.svg?branch=master)](https://travis-ci.org/colinjfw/sqlkit.svg?branch=master)
+[![codecov](https://codecov.io/gh/colinjfw/sqlkit/branch/master/graph/badge.svg)](https://codecov.io/gh/colinjfw/sqlkit)
+[![goreport](https://goreportcard.com/badge/github.com/colinjfw/sqlkit)](https://goreportcard.com/report/github.com/colinjfw/sqlkit)
+[![godoc](https://godoc.org/github.com/colinjfw/sqlkit?status.svg)](https://godoc.org/github.com/colinjfw/sqlkit)
+[![release](https://img.shields.io/github/release/colinjfw/sqlkit.svg)](https://github.com/colinjfw/sqlkit/releases)
 [![license](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Multipurpose SQL packages for GO programs.

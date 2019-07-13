@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/coldog/sqlkit/encoding"
+	"github.com/colinjfw/sqlkit/encoding"
 )
 
 var (

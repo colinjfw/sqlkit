@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coldog/sqlkit/db"
+	"github.com/colinjfw/sqlkit/db"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/require"
 )

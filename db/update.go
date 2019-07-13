@@ -6,7 +6,7 @@
 package db
 
 import (
-	"github.com/coldog/sqlkit/encoding"
+	"github.com/colinjfw/sqlkit/encoding"
 )
 
 // Update returns a new Update statement.
