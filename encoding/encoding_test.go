@@ -30,9 +30,9 @@ func init() {
 }
 
 func TestUnderscore(t *testing.T) {
-	require.Equal(t, "created_at", underscore("CreatedAt"))
-	require.Equal(t, "created", underscore("Created"))
-	require.Equal(t, "api", underscore("API"))
-	require.Equal(t, "test_api", underscore("Test_API"))
-	require.Equal(t, "test_upper", underscore("TestUPPER"))
+	require.Equal(t, "created_at", Underscore("CreatedAt"))
+	require.Equal(t, "created", Underscore("Created"))
+	require.Equal(t, "api", Underscore("API"))
+	require.Equal(t, "test_api", Underscore("Test_API"))
+	require.Equal(t, "test_upper", Underscore("TestUPPER"))
 }

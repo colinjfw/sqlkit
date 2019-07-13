@@ -37,10 +37,10 @@ func (e Encoder) WithMapper(m *reflectx.Mapper) Encoder {
 
 // DefaultMapper is the default reflectx mapper used. This uses strings.ToLower
 // to map field names.
-var DefaultMapper = reflectx.NewMapperFunc("db", underscore)
+var DefaultMapper = reflectx.NewMapperFunc("db", Underscore)
 
-// underscore will map camel case wording to snake case.
-func underscore(s string) string {
+// Underscore will map camel case wording to snake case.
+func Underscore(s string) string {
 	in := []rune(s)
 	isLower := func(idx int) bool {
 		return idx >= 0 && idx < len(in) && unicode.IsLower(in[idx])
