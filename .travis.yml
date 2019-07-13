@@ -16,11 +16,9 @@ before_install:
 - psql -c 'create database sqlkit;' -U postgres
 
 install:
-- curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 - go get -u gopkg.in/alecthomas/gometalinter.v2
 - gometalinter.v2 --install
 - mv $GOPATH/bin/gometalinter.v2 $GOPATH/bin/gometalinter
-- dep ensure
 
 script:
 - make test
