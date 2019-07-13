@@ -160,8 +160,13 @@ type DB interface {
 	// Close will close the underlying DB connection.
 	Close() error
 	// Begin will create a new transaction. If the passed in context is a TX
-	// then a savepoint will be used.
+	// then a savepoint will be used. If the passed in context is cancellable it
+	// will monitor this context and rollback.
 	Begin(context.Context) (TX, error)
+	// TX provides a safe way to execute a transaction. It ensures that if an
+	// error is raised Rollback() is called and if no error is raised Commit()
+	// is called.
+	TX(ctx context.Context, fn func(ctx context.Context) error) error
 	// Select returns a SelectStmt for the dialect.
 	Select(cols ...string) SelectStmt
 	// Insert returns an InsertStmt for the dialect.
@@ -336,6 +341,21 @@ func (t *tx) Rollback() error {
 	}
 	t.logger(Raw("ROLLBACK"))
 	return t.Tx.Rollback()
+}
+
+func (d *db) TX(ctx context.Context, fn func(context.Context) error) error {
+	tx, err := d.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	err = fn(tx)
+	if err != nil {
+		if rerr := tx.Rollback(); rerr != nil {
+			return fmt.Errorf("sqlkit/db: rollback error %v: %v", rerr, err)
+		}
+		return err
+	}
+	return tx.Commit()
 }
 
 func (d *db) Begin(ctx context.Context) (TX, error) {
