@@ -46,7 +46,7 @@ func TestUpdate_SQLRecord(t *testing.T) {
 	)
 }
 
-func TestUpdate_InvalidArgs(t *testing.T) {
+func TestUpdate_SQLInvalidArgs(t *testing.T) {
 	_, _, err := Update("users").
 		Columns("id", "extra").
 		Values(1).
@@ -54,7 +54,7 @@ func TestUpdate_InvalidArgs(t *testing.T) {
 	require.NotNil(t, err)
 }
 
-func TestUpdate_Postgres(t *testing.T) {
+func TestUpdate_SQLPostgres(t *testing.T) {
 	testSQL(t,
 		"UPDATE users SET c1=$1, c2=$2",
 		[]interface{}{"1", "2"},
@@ -62,5 +62,16 @@ func TestUpdate_Postgres(t *testing.T) {
 			Update("users").
 			Columns("c1", "c2").
 			Values("1", "2"),
+	)
+}
+
+func TestUpdate_SQLWhereStmt(t *testing.T) {
+	testSQL(t,
+		"UPDATE users SET c1=?, c2=? WHERE (c1 = ?)",
+		[]interface{}{"1", "2", 1},
+		Update("users").
+			Columns("c1", "c2").
+			Values("1", "2").
+			Where(Eq("c1", 1)),
 	)
 }

@@ -34,7 +34,7 @@ func (m genericMapper) query(q SelectStmt) string {
 		sql += join[0] + " JOIN " + join[1] + " ON " + join[2] + " "
 	}
 	if q.where != "" {
-		sql += "WHERE ( " + q.where + " ) "
+		sql += "WHERE " + q.where + " "
 	}
 	if q.groupBy != nil {
 		sql += "GROUP BY " + strings.Join(q.groupBy, ", ") + " "
@@ -58,7 +58,7 @@ func (m genericMapper) delete(q DeleteStmt) string {
 		sql += join[0] + " JOIN " + join[1] + " ON " + join[2] + " "
 	}
 	if q.sel.where != "" {
-		sql += "WHERE ( " + q.sel.where + " ) "
+		sql += "WHERE " + q.sel.where + " "
 	}
 	return rebind(m.bindType, sql)
 }
@@ -88,8 +88,8 @@ func (m genericMapper) update(q UpdateStmt) string {
 			sql += ", "
 		}
 	}
-	if q.where != "" {
-		sql += "WHERE " + q.where
+	if q.sel.where != "" {
+		sql += "WHERE " + q.sel.where
 	}
 	return rebind(m.bindType, sql)
 }

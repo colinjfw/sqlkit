@@ -18,8 +18,7 @@ type UpdateStmt struct {
 	table   string
 	columns []string
 	values  []interface{}
-	args    []interface{}
-	where   string
+	sel     SelectStmt
 	err     error
 	encoder encoding.Encoder
 }
@@ -37,9 +36,8 @@ func (i UpdateStmt) Columns(cols ...string) UpdateStmt {
 }
 
 // Where configures the WHERE block.
-func (i UpdateStmt) Where(where string, args ...interface{}) UpdateStmt {
-	i.where = where
-	i.args = append(i.args, args...)
+func (i UpdateStmt) Where(where interface{}, args ...interface{}) UpdateStmt {
+	i.sel = i.sel.Where(where, args...)
 	return i
 }
 
@@ -74,5 +72,5 @@ func (i UpdateStmt) SQL() (string, []interface{}, error) {
 		return "", nil, ErrStatementInvalid
 	}
 	sql := dialects[i.dialect].update(i)
-	return sql, append(i.values, i.args...), i.err
+	return sql, append(i.values, i.sel.values...), i.err
 }

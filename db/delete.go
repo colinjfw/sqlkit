@@ -22,7 +22,7 @@ func (q DeleteStmt) From(table string) DeleteStmt {
 
 // Where configures the WHERE clause in a DELETE statement. It follows the same
 // format as the select statement where statement.
-func (q DeleteStmt) Where(where string, values ...interface{}) DeleteStmt {
+func (q DeleteStmt) Where(where interface{}, values ...interface{}) DeleteStmt {
 	q.sel = q.sel.Where(where, values...)
 	return q
 }

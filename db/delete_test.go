@@ -11,7 +11,7 @@ import (
 
 func TestDelete_SQLWhere(t *testing.T) {
 	testSQL(t,
-		"DELETE FROM users WHERE ( name = ? )",
+		"DELETE FROM users WHERE name = ?",
 		[]interface{}{"test"},
 		Delete().
 			From("users").
@@ -19,9 +19,19 @@ func TestDelete_SQLWhere(t *testing.T) {
 	)
 }
 
+func TestDelete_SQLWhereStmt(t *testing.T) {
+	testSQL(t,
+		"DELETE FROM users WHERE (name = ?)",
+		[]interface{}{1},
+		Delete().
+			From("users").
+			Where(Eq("name", 1)),
+	)
+}
+
 func TestDelete_SQLJoin(t *testing.T) {
 	testSQL(t,
-		"DELETE FROM users INNER JOIN other ON other.user_id = users.id WHERE ( name = ? )",
+		"DELETE FROM users INNER JOIN other ON other.user_id = users.id WHERE name = ?",
 		[]interface{}{"test"},
 		Delete().
 			From("users").
@@ -32,7 +42,7 @@ func TestDelete_SQLJoin(t *testing.T) {
 
 func TestDelete_SQLLLeftJoin(t *testing.T) {
 	testSQL(t,
-		"DELETE FROM users LEFT JOIN other ON other.user_id = users.id WHERE ( name = ? )",
+		"DELETE FROM users LEFT JOIN other ON other.user_id = users.id WHERE name = ?",
 		[]interface{}{"test"},
 		Delete().
 			From("users").
@@ -43,7 +53,7 @@ func TestDelete_SQLLLeftJoin(t *testing.T) {
 
 func TestDelete_SQLLRightJoin(t *testing.T) {
 	testSQL(t,
-		"DELETE FROM users RIGHT JOIN other ON other.user_id = users.id WHERE ( name = ? )",
+		"DELETE FROM users RIGHT JOIN other ON other.user_id = users.id WHERE name = ?",
 		[]interface{}{"test"},
 		Delete().
 			From("users").

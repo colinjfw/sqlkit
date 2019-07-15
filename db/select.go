@@ -81,16 +81,35 @@ func insertQuestions(str string, insertAt, count int) (string, error) {
 	return str[:sIdx] + questions(count) + str[sIdx+1:], nil
 }
 
+func parseWhere(where interface{}) (sql string, values []interface{}, err error) {
+	switch v := where.(type) {
+	case string:
+		sql = v
+	case SQL:
+		sql, values, err = v.SQL()
+	default:
+		sql = fmt.Sprint(where)
+	}
+	return sql, values, err
+}
+
 // Where configures the WHERE clause. It expects values to be interpolated using
 // the question (?) mark parameter. For values that are slices, the question
 // mark will be transformed in the where query. This means that IN queries can
 // be writted without knowing the specific number of arguments needed in the
 // array.
-func (q SelectStmt) Where(where string, values ...interface{}) SelectStmt {
-	var err error
+//
+// The where parameter can take multiple types.
+func (q SelectStmt) Where(where interface{}, values ...interface{}) SelectStmt {
+	sql, extra, err := parseWhere(where)
+	if err != nil {
+		q.err = err
+		return q
+	}
+	values = append(values, extra...)
 	for i, arg := range values {
 		if ok, l, inVals := isSlice(arg); ok {
-			where, err = insertQuestions(where, i, l)
+			sql, err = insertQuestions(sql, i, l)
 			inVals = append(inVals, values[i+1:]...)
 			values = append(values[:i], inVals...)
 		}
@@ -99,7 +118,7 @@ func (q SelectStmt) Where(where string, values ...interface{}) SelectStmt {
 		q.err = err
 		return q
 	}
-	q.where = where
+	q.where = sql
 	q.values = append(q.values, values...)
 	return q
 }

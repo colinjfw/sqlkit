@@ -22,7 +22,7 @@ func TestSelect_SQLSelect(t *testing.T) {
 
 func TestSelect_SQLWhere(t *testing.T) {
 	testSQL(t,
-		"SELECT * FROM users WHERE ( name = ? )",
+		"SELECT * FROM users WHERE name = ?",
 		[]interface{}{"test"},
 		Select("*").
 			From("users").
@@ -30,9 +30,19 @@ func TestSelect_SQLWhere(t *testing.T) {
 	)
 }
 
+func TestSelect_SQLWhereStmt(t *testing.T) {
+	testSQL(t,
+		"SELECT * FROM users WHERE (name = ?)",
+		[]interface{}{"test"},
+		Select("*").
+			From("users").
+			Where(Eq("name", "test")),
+	)
+}
+
 func TestSelect_SQLGroupBy(t *testing.T) {
 	testSQL(t,
-		"SELECT * FROM users WHERE ( name = ? ) GROUP BY id",
+		"SELECT * FROM users WHERE name = ? GROUP BY id",
 		[]interface{}{"test"},
 		Select("*").
 			From("users").
@@ -43,7 +53,7 @@ func TestSelect_SQLGroupBy(t *testing.T) {
 
 func TestSelect_SQLOrderBy(t *testing.T) {
 	testSQL(t,
-		"SELECT * FROM users WHERE ( name = ? ) ORDER BY id, name",
+		"SELECT * FROM users WHERE name = ? ORDER BY id, name",
 		[]interface{}{"test"},
 		Select("*").
 			From("users").
@@ -54,7 +64,7 @@ func TestSelect_SQLOrderBy(t *testing.T) {
 
 func TestSelect_SQLOffsetLimit(t *testing.T) {
 	testSQL(t,
-		"SELECT * FROM users WHERE ( name = ? ) LIMIT 20 OFFSET 10",
+		"SELECT * FROM users WHERE name = ? LIMIT 20 OFFSET 10",
 		[]interface{}{"test"},
 		Select("*").
 			From("users").
@@ -96,7 +106,7 @@ func TestSelect_SQLInnerJoin(t *testing.T) {
 
 func TestSelect_SQLPostgres(t *testing.T) {
 	testSQL(t,
-		"SELECT * FROM users WHERE ( name = $1 )",
+		"SELECT * FROM users WHERE name = $1",
 		[]interface{}{"test"},
 		SelectStmt{dialect: Postgres}.
 			Select("*").
