@@ -107,18 +107,19 @@ func Open(driverName, dataSourceName string, opts ...Option) (DB, error) {
 	return out, nil
 }
 
-// Raw implements the SQL intorerface for providing SQL queries.
-func Raw(sql string, args ...interface{}) SQL {
-	return raw{sql: sql, args: args}
+type Raw string
+
+func (r Raw) SQL() (string, []interface{}, error) {
+	return string(r), nil, nil
 }
 
-type raw struct {
+type sqlHolder struct {
 	sql  string
 	args []interface{}
 	err  error
 }
 
-func (q raw) SQL() (string, []interface{}, error) {
+func (q sqlHolder) SQL() (string, []interface{}, error) {
 	return q.sql, q.args, q.err
 }
 
@@ -312,7 +313,7 @@ func (t *tx) rollbackSavepoint() error {
 func (t *tx) awaitCtx() {
 	<-t.Context.Done()
 	if err := t.Rollback(); err != nil {
-		t.logger(raw{err: err})
+		t.logger(sqlHolder{err: err})
 	}
 }
 

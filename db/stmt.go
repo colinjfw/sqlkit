@@ -139,7 +139,7 @@ func stmt(op operator, col string, value interface{}) Statement {
 	if s, ok := value.(SQL); ok {
 		right = s
 	} else {
-		right = Raw("?", value)
+		right = sqlHolder{sql: "?", args: []interface{}{value}}
 	}
 	return Statement{
 		left:     Raw(col),
