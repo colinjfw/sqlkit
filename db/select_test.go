@@ -139,3 +139,49 @@ func TestSelect_InNone(t *testing.T) {
 	require.Equal(t,
 		"sqlkit/db: could not find matching '?' at index 0", st.err.Error())
 }
+
+func TestSelect_SQLKitchenSink(t *testing.T) {
+	testSQL(t,
+		"SELECT * FROM users JOIN other ON users.id = other.user_id JOIN other2 ON users.id = other2.user_id WHERE ((id IN SELECT id FROM other3) AND ((birthday = ?) AND (name = ?))) GROUP BY id, name LIMIT 10 OFFSET 20",
+		[]interface{}{2019, "george"},
+		Select("*").
+			From("users").
+			Join("other", "users.id = other.user_id").
+			Join("other2", "users.id = other2.user_id").
+			Where(
+				In("id", Select("id").From("other3")).And(
+					EqAllMap(map[string]interface{}{
+						"name":     "george",
+						"birthday": 2019,
+					}),
+				),
+			).
+			GroupBy("id", "name").
+			Limit(10).
+			Offset(20),
+	)
+}
+
+var _bSQL string
+
+func BenchmarkFib10(b *testing.B) {
+	// run the Fib function b.N times
+	for n := 0; n < b.N; n++ {
+		_bSQL, _, _ = Select("*").
+			From("users").
+			Join("other", "users.id = other.user_id").
+			Join("other2", "users.id = other2.user_id").
+			Where(
+				In("id", Select("id").From("other3")).And(
+					EqAllMap(map[string]interface{}{
+						"name":     "george",
+						"birthday": 2019,
+					}),
+				),
+			).
+			GroupBy("id", "name").
+			Limit(10).
+			Offset(20).
+			SQL()
+	}
+}
