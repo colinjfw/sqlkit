@@ -69,14 +69,6 @@ func (m genericMapper) delete(q DeleteStmt) string {
 	sql.WriteString("DELETE FROM ")
 	sql.WriteString(q.sel.table)
 	sql.WriteString(" ")
-	for _, join := range q.sel.join {
-		sql.WriteString(join[0])
-		sql.WriteString(" JOIN ")
-		sql.WriteString(join[1])
-		sql.WriteString(" ON ")
-		sql.WriteString(join[2])
-		sql.WriteString(" ")
-	}
 	if q.sel.where != "" {
 		sql.WriteString("WHERE ")
 		sql.WriteString(q.sel.where)
