@@ -71,6 +71,10 @@ func (i UpdateStmt) SQL() (string, []interface{}, error) {
 	if len(i.columns) != len(i.values) {
 		return "", nil, ErrStatementInvalid
 	}
+	if i.sel.err != nil {
+		return "", nil, i.sel.err
+	}
+	i.sel = i.sel.parseWhere()
 	sql := dialects[i.dialect].update(i)
 	return sql, append(i.values, i.sel.values...), i.err
 }

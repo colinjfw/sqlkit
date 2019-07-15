@@ -117,7 +117,7 @@ func TestSelect_SQLPostgres(t *testing.T) {
 
 func TestSelect_In(t *testing.T) {
 	arr := []string{"a", "b"}
-	st := Select().Where("a = ? and x in ?", "b", arr)
+	st := Select().Where("a = ? and x in ?", "b", arr).parseWhere()
 
 	require.Equal(t, "a = ? and x in (?, ?)", st.where)
 	require.Equal(t, []interface{}{"b", "a", "b"}, st.values)
@@ -125,7 +125,7 @@ func TestSelect_In(t *testing.T) {
 
 func TestSelect_InPtr(t *testing.T) {
 	arr := []string{"a", "b"}
-	st := Select().Where("a = ? and x in ?", "b", &arr)
+	st := Select().Where("a = ? and x in ?", "b", &arr).parseWhere()
 
 	require.Equal(t, "a = ? and x in (?, ?)", st.where)
 	require.Equal(t, []interface{}{"b", "a", "b"}, st.values)
@@ -133,7 +133,7 @@ func TestSelect_InPtr(t *testing.T) {
 
 func TestSelect_InNone(t *testing.T) {
 	arr := []string{"a", "b"}
-	st := Select().Where("x in", arr)
+	st := Select().Where("x in", arr).parseWhere()
 
 	require.NotNil(t, st.err)
 	require.Equal(t,
@@ -142,7 +142,7 @@ func TestSelect_InNone(t *testing.T) {
 
 func TestSelect_SQLKitchenSink(t *testing.T) {
 	testSQL(t,
-		"SELECT * FROM users JOIN other ON users.id = other.user_id JOIN other2 ON users.id = other2.user_id WHERE ((id IN SELECT id FROM other3) AND ((birthday = ?) AND (name = ?))) GROUP BY id, name LIMIT 10 OFFSET 20",
+		"SELECT * FROM users  JOIN other ON users.id = other.user_id  JOIN other2 ON users.id = other2.user_id WHERE ((id IN (SELECT id FROM other3)) AND ((birthday = ?) AND (name = ?))) GROUP BY id, name LIMIT 10 OFFSET 20",
 		[]interface{}{2019, "george"},
 		Select("*").
 			From("users").

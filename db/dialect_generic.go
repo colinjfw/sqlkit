@@ -34,6 +34,7 @@ func (m genericMapper) query(q SelectStmt) string {
 	sql.WriteString(q.table)
 
 	for _, join := range q.join {
+		sql.WriteString(" ")
 		sql.WriteString(join[0])
 		sql.WriteString(" JOIN ")
 		sql.WriteString(join[1])

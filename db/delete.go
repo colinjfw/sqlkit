@@ -53,6 +53,10 @@ func (q DeleteStmt) RightJoin(table, on string) DeleteStmt {
 
 // SQL implements the SQL interface.
 func (q DeleteStmt) SQL() (string, []interface{}, error) {
+	if q.sel.err != nil {
+		return "", nil, q.sel.err
+	}
+	q.sel = q.sel.parseWhere()
 	sql := dialects[q.dialect].delete(q)
 	return sql, q.sel.values, q.sel.err
 }
