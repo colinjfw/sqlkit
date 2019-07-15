@@ -8,48 +8,35 @@ package db
 import "reflect"
 
 type where struct {
-	bare SQL       // Bare where clause.
-	stmt Statement // Statement for multiple calls of where.
+	sql SQL // Bare where clause.
 }
 
 func (q where) where(op operator, where interface{}, values ...interface{}) where {
-	var sql SQL
+	var next SQL
 	switch v := where.(type) {
 	case string:
 		if len(values) > 0 {
-			sql = sqlHolder{sql: v, args: values}
+			next = RawWithValues(v, values...)
 		} else {
-			sql = Raw(v)
+			next = Raw(v) // More efficient implementation if no values.
 		}
 	case SQL:
-		sql = v
+		next = v
 	default:
 		panic("unknown type")
 	}
 
-	if q.stmt.isZero() {
-		// No statement yet to add to.
-		if q.bare == nil {
-			// Empty state just add the sql.
-			q.bare = sql
-		} else {
-			// Bare is present, add a clause to the right.
-			q.stmt = Statement{left: q.bare, operator: op, right: sql}
-			q.bare = nil
-		}
+	if q.sql == nil {
+		q.sql =next
 	} else {
-		// We have a statement add another clause to the right.
-		next := Statement{left: q.stmt, operator: op, right: sql}
-		q.stmt = next
+		q.sql = Statement{left: q.sql, operator: op, right: next}
 	}
 	return q
 }
 
 func (q where) SQL() (sql string, values []interface{}, err error) {
-	if q.bare != nil {
-		sql, values, err = q.bare.SQL()
-	} else if !q.stmt.isZero() {
-		sql, values, err = q.stmt.SQL()
+	if q.sql != nil {
+		sql, values, err = q.sql.SQL()
 	} else {
 		return "", nil, nil // No statements.
 	}

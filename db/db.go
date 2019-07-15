@@ -115,6 +115,11 @@ func (r Raw) SQL() (string, []interface{}, error) {
 	return string(r), nil, nil
 }
 
+// RawWithValues returns an SQL interface that ties values to the string.
+func RawWithValues(sql string, values ...interface{}) SQL {
+	return sqlHolder{sql: sql, args: values}
+}
+
 type sqlHolder struct {
 	sql  string
 	args []interface{}

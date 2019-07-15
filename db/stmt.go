@@ -144,7 +144,7 @@ func stmt(op operator, col string, value interface{}) Statement {
 	if s, ok := value.(SQL); ok {
 		right = s
 	} else {
-		right = sqlHolder{sql: "?", args: []interface{}{value}}
+		right = RawWithValues("?", value)
 	}
 	if s, ok := right.(SelectStmt); ok {
 		right = parens{s}

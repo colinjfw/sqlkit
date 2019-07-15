@@ -175,11 +175,12 @@ func TestSelect_SQLMultiWhere(t *testing.T) {
 
 func TestSelect_SQLMultiWhereMixed(t *testing.T) {
 	testSQL(t,
-		"SELECT * FROM users WHERE ((name = ?) AND id = ?)",
+		"SELECT * FROM users WHERE (((name = ?) AND name = othername) AND id = ?)",
 		[]interface{}{1, 2},
 		Select("*").
 			From("users").
 			Where(Eq("name", 1)).
+			Where("name = othername").
 			Where("id = ?", 2),
 	)
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -43,6 +44,7 @@ func wrap(t *testing.T, cb func(db DB)) {
 }
 
 func testSQL(t *testing.T, expected string, values []interface{}, sql SQL) {
+	spew.Dump(sql)
 	str, vals, err := sql.SQL()
 	require.Nil(t, err)
 	require.Equal(t, expected, strings.TrimSpace(str))
