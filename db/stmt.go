@@ -57,6 +57,8 @@ type Statement struct {
 	right    SQL
 }
 
+func (s Statement) isZero() bool { return s.operator == none }
+
 // And configures the And operator.
 func (s Statement) And(c Statement) Statement {
 	return Statement{left: s, operator: and, right: c}
@@ -141,6 +143,9 @@ func stmt(op operator, col string, value interface{}) Statement {
 	} else {
 		right = sqlHolder{sql: "?", args: []interface{}{value}}
 	}
+	if s, ok := right.(SelectStmt); ok {
+		right = parens{s}
+	}
 	return Statement{
 		left:     Raw(col),
 		operator: op,
@@ -157,4 +162,11 @@ func mapKeys(m map[string]interface{}) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+type parens struct { sql SQL }
+
+func (q parens) SQL() (string, []interface{}, error) {
+	sql, values, err := q.sql.SQL()
+	return "(" + sql + ")", values, err
 }
