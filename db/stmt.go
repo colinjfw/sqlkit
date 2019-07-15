@@ -79,6 +79,9 @@ func (s Statement) SQL() (string, []interface{}, error) {
 	if err != nil {
 		return "", nil, err
 	}
+	if left == "" || right == "" {
+		return "", nil, ErrStatementInvalid
+	}
 	sql := "(" + left + " " + s.operator.String() + " " + right + ")"
 	return sql, append(argsLeft, argsRight...), nil
 }

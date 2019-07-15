@@ -162,6 +162,42 @@ func TestSelect_SQLKitchenSink(t *testing.T) {
 	)
 }
 
+func TestSelect_SQLMultiWhere(t *testing.T) {
+	testSQL(t,
+		"SELECT * FROM users WHERE ((name = ?) AND (id = ?))",
+		[]interface{}{1, 2},
+		Select("*").
+			From("users").
+			Where(Eq("name", 1)).
+			Where(Eq("id", 2)),
+	)
+}
+
+func TestSelect_SQLMultiWhereMixed(t *testing.T) {
+	testSQL(t,
+		"SELECT * FROM users WHERE ((name = ?) AND id = ?)",
+		[]interface{}{1, 2},
+		Select("*").
+			From("users").
+			Where(Eq("name", 1)).
+			Where("id = ?", 2),
+	)
+}
+
+func TestSelect_BlankWhere(t *testing.T) {
+	st := Select().Where("").parseWhere()
+
+	require.Equal(t, "", st.where)
+}
+
+func TestSelect_BlankWhereMulti(t *testing.T) {
+	st := Select().Where("").Where("").parseWhere()
+
+	require.NotNil(t, st.err)
+	require.Equal(t,
+		"sqlkit/db: statement invalid", st.err.Error())
+}
+
 var _bSQL string
 
 func BenchmarkFib10(b *testing.B) {
