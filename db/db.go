@@ -107,8 +107,10 @@ func Open(driverName, dataSourceName string, opts ...Option) (DB, error) {
 	return out, nil
 }
 
+// Raw implements the SQL interface for a simple string of SQL.
 type Raw string
 
+// SQL implements the SQL interface.
 func (r Raw) SQL() (string, []interface{}, error) {
 	return string(r), nil, nil
 }

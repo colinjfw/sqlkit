@@ -147,26 +147,31 @@ func (q SelectStmt) Limit(limit int) SelectStmt {
 	return q
 }
 
-// Join adds a join statement of a specific kind.
-func (q SelectStmt) Join(kind, table, on string, values ...interface{}) SelectStmt {
+// join adds a join statement of a specific kind.
+func (q SelectStmt) joins(kind, table, on string, values ...interface{}) SelectStmt {
 	q.join = append(q.join, []string{kind, table, on})
 	q.values = append(q.values, values...)
 	return q
 }
 
+// Join adds a join.
+func (q SelectStmt) Join(table, on string) SelectStmt {
+	return q.joins("", table, on)
+}
+
 // InnerJoin adds a join of type INNER.
 func (q SelectStmt) InnerJoin(table, on string) SelectStmt {
-	return q.Join("INNER", table, on)
+	return q.joins("INNER", table, on)
 }
 
 // LeftJoin adds a join of type LEFT.
 func (q SelectStmt) LeftJoin(table, on string) SelectStmt {
-	return q.Join("LEFT", table, on)
+	return q.joins("LEFT", table, on)
 }
 
 // RightJoin adds a join of type RIGHT.
 func (q SelectStmt) RightJoin(table, on string) SelectStmt {
-	return q.Join("RIGHT", table, on)
+	return q.joins("RIGHT", table, on)
 }
 
 // SQL implements the SQL interface.

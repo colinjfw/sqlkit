@@ -27,25 +27,28 @@ func (q DeleteStmt) Where(where interface{}, values ...interface{}) DeleteStmt {
 	return q
 }
 
-// Join adds a join statement of a specific kind.
-func (q DeleteStmt) Join(kind, table, on string, values ...interface{}) DeleteStmt {
-	q.sel = q.sel.Join(kind, table, on, values...)
+// Join adds a join.
+func (q DeleteStmt) Join(table, on string) DeleteStmt {
+	q.sel = q.sel.Join(table, on)
 	return q
 }
 
 // InnerJoin adds a join of type INNER.
 func (q DeleteStmt) InnerJoin(table, on string) DeleteStmt {
-	return q.Join("INNER", table, on)
+	q.sel = q.sel.InnerJoin(table, on)
+	return q
 }
 
 // LeftJoin adds a join of type LEFT.
 func (q DeleteStmt) LeftJoin(table, on string) DeleteStmt {
-	return q.Join("LEFT", table, on)
+	q.sel = q.sel.LeftJoin(table, on)
+	return q
 }
 
 // RightJoin adds a join of type RIGHT.
 func (q DeleteStmt) RightJoin(table, on string) DeleteStmt {
-	return q.Join("RIGHT", table, on)
+	q.sel = q.sel.RightJoin(table, on)
+	return q
 }
 
 // SQL implements the SQL interface.
