@@ -2,25 +2,25 @@ package example
 
 import (
 	"context"
-	"crypto/rand"
-	"fmt"
 	"time"
 
 	"github.com/colinjfw/sqlkit/db"
 )
 
-func uuid() string {
-	b := make([]byte, 16)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+func createTable(d db.DB) error {
+	return d.Exec(context.Background(), db.Raw(
+		`create table users (
+			id integer primary key autoincrement,
+			email text,
+			created_at timestamp default current_timestamp not null,
+			updated_at timestamp default current_timestamp not null
+		)`,
+	)).Err()
 }
 
 // Base is a base type for database objects.
 type Base struct {
-	ID        string
+	ID       int
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -40,19 +40,23 @@ func (rep *UserRepo) table() string { return "users" }
 
 // Save a user.
 func (rep *UserRepo) Save(ctx context.Context, u *User) error {
-	var stmt db.SQL
-	if u.ID == "" {
-		u.ID, u.CreatedAt, u.UpdatedAt = uuid(), time.Now(), time.Now()
-		stmt = rep.db.Insert().Into(rep.table()).Record(u)
-	} else {
-		u.UpdatedAt = time.Now()
-		stmt = rep.db.Update(rep.table()).Record(u).Where("id = ?", u.ID)
+	if u.ID == 0 {
+		r := rep.db.Exec(ctx, rep.db.Insert().
+			Into(rep.table()).
+			Record(u, "email"))
+		u.ID = int(r.LastID)
+		return r.Err()
 	}
-	return rep.db.Exec(ctx, stmt).Err()
+
+	u.UpdatedAt = time.Now()
+	r := rep.db.Exec(ctx, rep.db.Update(rep.table()).
+		Record(u, "email", "updated_at").
+		Where("id = ?", u.ID))
+	return r.Err()
 }
 
 // Get will fetch a user.
-func (rep *UserRepo) Get(ctx context.Context, id string) (*User, error) {
+func (rep *UserRepo) Get(ctx context.Context, id int) (*User, error) {
 	u := &User{}
 	err := rep.db.Query(
 		ctx,

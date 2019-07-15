@@ -51,14 +51,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	users = &UserRepo{db: d}
-	err = d.Exec(context.Background(), db.Raw(
-		`create table users (
-			id int primary key,
-			email text,
-			created_at timestamp,
-			updated_at timestamp
-		)`,
-	)).Err()
+	err = createTable(d)
 	if err != nil {
 		panic(err)
 	}
