@@ -48,8 +48,8 @@ func (i InsertStmt) Value(column string, value interface{}) InsertStmt {
 }
 
 // Record will decode using the decoder into a list of fields and values.
-func (i InsertStmt) Record(obj interface{}) InsertStmt {
-	cols, vals, err := i.encoder.Encode(obj)
+func (i InsertStmt) Record(obj interface{}, fields ...string) InsertStmt {
+	cols, vals, err := i.encoder.Encode(obj, fields...)
 	if err != nil {
 		i.err = err
 		return i

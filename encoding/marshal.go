@@ -18,7 +18,7 @@ var (
 // Encode will encode to a set of fields and values using the Encoder's
 // settings. It will return and error if there are duplicate fields and unsafe
 // is not set.
-func (e Encoder) Encode(obj interface{}) ([]string, []interface{}, error) {
+func (e Encoder) Encode(obj interface{}, fields ...string) ([]string, []interface{}, error) {
 	m := DefaultMapper
 	if e.mapper != nil {
 		m = e.mapper
@@ -35,6 +35,9 @@ func (e Encoder) Encode(obj interface{}) ([]string, []interface{}, error) {
 	names := make([]string, 0, len(tm.Index))
 	for _, field := range tm.Index {
 		if field.Embedded {
+			continue
+		}
+		if len(fields) > 0 && !inStr(fields, field.Name) {
 			continue
 		}
 		if inStr(names, field.Name) {

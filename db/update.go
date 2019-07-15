@@ -57,8 +57,8 @@ func (i UpdateStmt) Value(name string, val interface{}) UpdateStmt {
 }
 
 // Record will encode the struct and append the columns and returned values.
-func (i UpdateStmt) Record(obj interface{}) UpdateStmt {
-	cols, vals, err := i.encoder.Encode(obj)
+func (i UpdateStmt) Record(obj interface{}, fields ...string) UpdateStmt {
+	cols, vals, err := i.encoder.Encode(obj, fields...)
 	if err != nil {
 		i.err = err
 		return i
