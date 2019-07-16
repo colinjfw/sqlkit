@@ -16,8 +16,12 @@ var (
 )
 
 // Encode will encode to a set of fields and values using the Encoder's
-// settings. It will return and error if there are duplicate fields and unsafe
+// settings. It will return an error if there are duplicate fields and unsafe
 // is not set.
+//
+// By default Encode walks through all fields in a struct. If the fields
+// argument is provided however it will only walk through the fields provided.
+// An error will be returned if the field doesn't exist.
 func (e Encoder) Encode(obj interface{}, fields ...string) ([]string, []interface{}, error) {
 	m := DefaultMapper
 	if e.mapper != nil {
@@ -57,8 +61,8 @@ func (e Encoder) Encode(obj interface{}, fields ...string) ([]string, []interfac
 }
 
 // Marshal runs the default encoder.
-func Marshal(obj interface{}) ([]string, []interface{}, error) {
-	return Encoder{}.Encode(obj)
+func Marshal(obj interface{}, fields ...string) ([]string, []interface{}, error) {
+	return Encoder{}.Encode(obj, fields...)
 }
 
 func inStr(arr []string, val string) bool {

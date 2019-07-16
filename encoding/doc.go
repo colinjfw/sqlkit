@@ -4,28 +4,15 @@
 // of the MIT license.  See the LICENSE file for details.
 
 /*
-Package encoding provides marshalling values to and from SQL. Gracefully
-handles null values.
+Package encoding handles taking golang interfaces and converting them from
+sql types to golang types. It uses sqlx under the hood to manage this.
 
-The simplest way to use this is to take advantage of the base marshal and
-unmarshal functions:
+One of the main differences is that it has a different philosophy from the core
+golang database/sql package when it comes to nullable types. Mainly, nullable
+types are converted into their default value in golang. Instead of requiring a
+pointer.
 
-An example below:
-
-  db, err := sql.Open("sqlite3", ":memory:")
-
-  type user struct {
-  	ID int `db:"id"`
-  }
-
-  cols, vals, err := encoding.Marshal(user{1})
-  _, err = db.Exec(
-  	"insert into users ("+strings.Join(cols, ",")+") values "+"(?)", vals...,
-  )
-
-  users := []user{}
-  rows, err := db.Query("select * from users")
-  err = encoding.Unmarshal(&users, rows)
-
+You can call Marshal and Unmarshal directly or instantiate an Encoder. This is
+a similar api to encoding/json and other golang packages.
 */
 package encoding

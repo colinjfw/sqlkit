@@ -13,7 +13,7 @@ import (
 	"github.com/colinjfw/sqlkit/encoding"
 )
 
-func ExampleMarshal() {
+func Example_encoding() {
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		panic(err)
@@ -30,41 +30,7 @@ func ExampleMarshal() {
 
 	usr := user{ID: 1}
 
-	cols, vals, err := encoding.Marshal(usr)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("cols: %v, vals: %v\n", cols, vals)
-
-	_, err = db.Exec(
-		"insert into users ("+strings.Join(cols, ",")+") values "+"(?)", vals...,
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	// Output:
-	// cols: [id], vals: [1]
-}
-
-func ExampleUnmarshal() {
-	db, err := sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		panic(err)
-	}
-
-	type user struct {
-		ID int `db:"id"`
-	}
-
-	_, err = db.Exec("create table users (id int primary key)")
-	if err != nil {
-		panic(err)
-	}
-
-	usr := user{ID: 1}
-
-	cols, vals, err := encoding.Marshal(usr)
+	cols, vals, err := encoding.Marshal(usr, "id")
 	if err != nil {
 		panic(err)
 	}
